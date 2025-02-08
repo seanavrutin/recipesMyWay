@@ -1,0 +1,68 @@
+const OpenAI = require('openai');
+
+class ChatGPTService {
+    constructor() {
+        this.openai = new OpenAI({
+            apiKey: process.env.OPENAI_API_KEY, // Ensure your API key is set in .env
+        });
+    }
+
+    async formatRecipe(inputText) {
+        try {
+            const prompt = `
+אתה מומחה בארגון מתכונים בצורה ברורה ומובנית.
+הקלט יכול להיות במלל חופשי (במקרה זה אל תקח שום נתונים מכל מקום אחר, רק מהקלט). הקלט יכול להיות גם קוד html של אתר בו המתכון נמצא , במקרה זה תקח את המתכון רק מהאתר הזה, אל תחפש עוד נתונים במקומות אחרים)            
+ארגן את הקלט לתוך JSON בפורמט הבא:
+[
+  {
+    "key": "כותרת",
+    "value": "שם המתכון"
+  },
+  {
+    "key": "מרכיבים",
+    "value": [
+      "מרכיב 1",
+      "מרכיב 2"
+    ]
+  },
+  {
+    "key": "הוראות הכנה",
+    "value": [
+      "שלב 1",
+      "שלב 2"
+    ]
+  },
+    {
+    "key": "קטגוריה",
+    "value": "קטגוריה1,קטגוריה2"
+  }
+]
+                            
+אם המתכון מכיל מספר מתכונים בתוכו (לדוגמה המתכון הוא מתכון של מרק, אבל יש גם את המתכון לקרוטונים הנלווים למרק), הכנס את הכותרות המתאימות לJSON (רכיבים והוראות הכנה אם קיימים)
+את החלק של "קטגוריה" חשב לבד, כך שכל מתכון יקבל קטגוריה אחת או יותר, מופרדות על ידי פסיקים.
+התשובה הסופית צריכה להיות JSON שיכול להתפרסר
+            הקלט: ${inputText}
+            `;
+    
+            const response = await this.openai.chat.completions.create({
+                model: 'gpt-4o',
+                messages: [{ role: 'user', content: prompt }],
+                max_tokens: 700,
+            });
+
+            let recipeText = response.choices[0].message.content.trim();
+
+            const jsonStart = recipeText.indexOf("[");
+            const jsonEnd = recipeText.lastIndexOf("]") + 1;
+            const jsonText = recipeText.substring(jsonStart, jsonEnd);
+            const parsedRecipe = JSON.parse(jsonText);
+
+            return parsedRecipe;    
+        } catch (error) {
+            console.error('Error formatting recipe:', error.response?.data || error.message);
+            return 'מצטער, לא הצלחתי לעבד את המתכון.';
+        }
+    }
+}
+
+module.exports = ChatGPTService;
