@@ -2,6 +2,11 @@ import React from "react";
 import HomePage from "./pages/HomePage";
 import { createTheme, ThemeProvider, CssBaseline } from "@mui/material";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Background from "./components/Background"
+import { FontSizeProvider } from "./context/FontSizeContext";
+import FontSizeController from "./components/FontSizeController";
+
+
 
 import { CacheProvider } from "@emotion/react";
 import createCache from "@emotion/cache";
@@ -19,23 +24,25 @@ const rtlCache = createCache({
 function App() {
     return (
         <CacheProvider value={rtlCache}>
-            <ThemeProvider theme={theme}>
-              <CssBaseline />
-              <Router>
-                  <Routes>
-                      {/* HomePage with support for userId in query params */}
-                      <Route dir="rtl" path="/" element={
-                        <div dir="rtl">
-                          <HomePage />
-                        </div>
-                        // <HomePage />
-                      } />
-                  </Routes>
-              </Router>
-                {/* <div dir="rtl">
-                    <HomePage />
-                </div> */}
-            </ThemeProvider>
+            <FontSizeProvider>
+                <ThemeProvider theme={theme}>
+                <CssBaseline />
+                <Router>
+                    <Routes>
+                        <Route dir="rtl" path="/" element={
+                            <div dir="rtl">
+                                <FontSizeController />
+                                <Background />
+                                <HomePage />
+                            </div>
+                        } />
+                    </Routes>
+                </Router>
+                    {/* <div dir="rtl">
+                        <HomePage />
+                    </div> */}
+                </ThemeProvider>
+            </FontSizeProvider>
         </CacheProvider>
     );
 }

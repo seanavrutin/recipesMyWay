@@ -2,9 +2,11 @@ import React, { useState } from "react";
 import { Card, CardHeader, CardContent, Collapse, Typography, IconButton } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import { useFontSize } from "../context/FontSizeContext";
 
 const RecipeCard = ({ recipe, index, onEdit, onDelete }) => {
     const [expanded, setExpanded] = useState(false);
+    const { fontSize } = useFontSize(); // Get global font size
 
     const handleExpandClick = () => {
         setExpanded(!expanded);
@@ -18,7 +20,11 @@ const RecipeCard = ({ recipe, index, onEdit, onDelete }) => {
     return (
         <Card sx={{ marginBottom: "16px", backgroundColor: index % 2 === 0 ? "#e0f7fa" : "#f1f8ff" }}>
             <CardHeader
-                title={title}
+                title={
+                    <Typography sx={{ fontSize: fontSize * 1.2 + "px" }} align="right">
+                        {title}
+                    </Typography>
+                }
                 action={
                     <>
                         <IconButton onClick={() => onEdit(recipe.id)}>
@@ -33,18 +39,24 @@ const RecipeCard = ({ recipe, index, onEdit, onDelete }) => {
             />
             <Collapse in={expanded} timeout="auto" unmountOnExit>
                 <CardContent>
-                    <Typography variant="h6">מרכיבים</Typography>
+                    {/* Updated Section Title Font Size */}
+                    <Typography variant="h6" sx={{ fontSize: fontSize * 1.1 + "px" }}>
+                        מרכיבים
+                    </Typography>
+                    {/* Updated Ingredients List Font Size */}
                     <ul>
                         {ingredients.map((ing, i) => (
-                            <li key={i}>{ing}</li>
+                            <li key={i} style={{ fontSize: fontSize + "px" }}>{ing}</li>
                         ))}
                     </ul>
-                    <Typography variant="h6" sx={{ marginTop: "16px" }}>
+                    {/* Updated Section Title Font Size */}
+                    <Typography variant="h6" sx={{ marginTop: "16px", fontSize: fontSize * 1.1 + "px" }}>
                         הוראות הכנה
                     </Typography>
+                    {/* Updated Instructions List Font Size */}
                     <ol>
                         {instructions.map((step, i) => (
-                            <li key={i}>{step}</li>
+                            <li key={i} style={{ fontSize: fontSize + "px" }}>{step}</li>
                         ))}
                     </ol>
                 </CardContent>

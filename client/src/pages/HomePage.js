@@ -87,7 +87,7 @@ const HomePage = () => {
     return (
         <Box sx={{ padding: "16px" }}>
             <Typography variant="h4" align="center" gutterBottom>
-                המתכונים שלי
+                מתכונים
             </Typography>
 
             {/* Search Bar */}
