@@ -68,6 +68,17 @@ class CouchbaseService {
             return [];
         }
     }
+
+    async fetchAllDocuments() {
+        try {
+            const query = `SELECT META().id, * FROM \`Recipes\``;
+            const result = await this.cluster.query(query);
+            return result.rows; // Return all documents
+        } catch (error) {
+            console.error("Error fetching documents from Couchbase:", error);
+            throw error;
+        }
+    }
 }
 
 module.exports = new CouchbaseService();

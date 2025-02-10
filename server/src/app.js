@@ -3,6 +3,8 @@ const express = require('express');
 const WebhookRoutes = require('./routes/WebhookRoutes');
 const CouchbaseService = require('./config/couchbase');
 const RecipeRoutes = require("./routes/RecipeRoutes");
+const BackupRoutes = require("./routes/BackupRoutes");
+
 const cors = require("cors");
 const allowedOrigins = ["http://localhost:4000", "http://10.100.102.5:4000", "http://your-production-domain.com"];
 
@@ -36,6 +38,7 @@ class App {
     initializeRoutes() {
         this.app.use('/webhook', WebhookRoutes);
         this.app.use("/api", RecipeRoutes);
+        this.app.use("/backup", BackupRoutes);
     }
 
     async initializeDatabase() {
