@@ -86,7 +86,16 @@ const HomePage = () => {
 
     return (
         <Box sx={{ padding: "16px" }}>
-            <Typography variant="h4" align="center" gutterBottom>
+            <Typography
+                variant="h4"
+                align="center"
+                gutterBottom
+                sx={{
+                    fontFamily: "'Rubik Vinyl', cursive", // Apply Rubik Vinyl
+                    fontSize: "2.5rem", // Adjust font size if needed
+                    direction: "rtl", // Ensure proper alignment for Hebrew
+                }}
+            >
                 מתכונים
             </Typography>
 

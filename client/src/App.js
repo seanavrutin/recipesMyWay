@@ -5,6 +5,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Background from "./components/Background"
 import { FontSizeProvider } from "./context/FontSizeContext";
 import FontSizeController from "./components/FontSizeController";
+import "@fontsource/rubik-vinyl";
 
 
 
