@@ -1,70 +1,74 @@
-import React from "react";
-import { Box, FormControl, InputLabel, Select, MenuItem, Chip, OutlinedInput  } from "@mui/material";
+import React, { useState } from "react";
+import { Box, Button, Collapse, IconButton } from "@mui/material";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 
 const FilterBar = ({ categories, selectedCategories, onCategoryChange }) => {
-    const handleAddCategory = (event) => {
-        const { value } = event.target;
-        // Add only unique categories
-        onCategoryChange([...selectedCategories, ...value.filter((v) => !selectedCategories.includes(v))]);
+    const [expanded, setExpanded] = useState(true); // State to toggle expanded view
+
+    const toggleExpanded = () => {
+        setExpanded(!expanded);
     };
 
-    const handleRemoveCategory = (categoryToRemove) => {
-        // Remove category
-        onCategoryChange(selectedCategories.filter((category) => category !== categoryToRemove));
+    const handleCategoryClick = (category) => {
+        if (category === "הכל") {
+            // Select all categories if none or not all are selected, otherwise deselect all
+            onCategoryChange(
+                selectedCategories.length === categories.length ? [] : [...categories]
+            );
+        } else {
+            // Toggle individual category
+            const newSelectedCategories = selectedCategories.includes(category)
+                ? selectedCategories.filter((c) => c !== category) // Deselect category
+                : [...selectedCategories, category]; // Select category
+            onCategoryChange(newSelectedCategories);
+        }
     };
 
     return (
-        <Box sx={{ marginBottom: "16px", textAlign: "right" }}>
-            {/* Select Dropdown */}
-            <FormControl fullWidth>
-                <InputLabel
+        <Box sx={{ marginBottom: "16px", textAlign: "right"}}>
+            {/* Buttons Row */}
+            <Collapse in={expanded} timeout="auto" collapsedSize="45px">
+                <Box
                     sx={{
-                        textAlign: "right"
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: "8px",
+                        overflow: "hidden"
                     }}
                 >
-                    בחר קטגוריות
-                </InputLabel>
-                <Select
-                    multiple
-                    value={selectedCategories}
-                    onChange={handleAddCategory}
-                    input={<OutlinedInput id="select-multiple-chip" label="בחר קטגוריות" />}
-                    renderValue={(selected) => (
-                        <Box sx={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                            {selected.map((category) => (
-                                <Chip
-                                    key={category}
-                                    label={category}
-                                    onDelete={() => handleRemoveCategory(category)} // Enable the "X" button
-                                    onMouseDown={(e) => e.stopPropagation()} // Prevent dropdown from opening
-                                    sx={{
-                                        cursor: "pointer",
-                                        direction: "rtl",
-                                        ".MuiChip-deleteIcon": {
-                                            marginRight: "0px",
-                                            marginLeft: "2px",
-                                        },
-                                    }}
-                                />
-                            ))}
-                        </Box>
-                    )}
-                >
-                    {categories.map((category) => (
-                        <MenuItem
-                            key={category}
-                            value={category}
-                            sx={{
-                                textAlign: "right", // Align text in the menu item to the right
-                                justifyContent: "flex-end", // Align text within the menu item to the end (right-aligned)
-                                direction: "rtl", // RTL support for proper behavior
-                            }}
-                        >
-                            {category}
-                        </MenuItem>
-                    ))}
-                </Select>
-            </FormControl>
+                    {/* Reverse Order for "הכל" */}
+                    {[{ label: "הכל", key: "הכל" }, ...categories.map((cat) => ({ label: cat, key: cat }))]
+                        
+                        .map(({ label, key }) => (
+                            <Button
+                                key={key}
+                                variant={
+                                    (key === "הכל" && selectedCategories.length === categories.length) ||
+                                    selectedCategories.includes(key)
+                                        ? "contained"
+                                        : "outlined"
+                                }
+                                onClick={() => handleCategoryClick(key)}
+                                sx={{
+                                    fontSize: "14px",
+                                    padding: "4px 8px",
+                                    minWidth: "80px",
+                                    direction: "rtl",
+                                }}
+                            >
+                                {label}
+                            </Button>
+                        ))}
+                </Box>
+            </Collapse>
+
+            {/* Expand/Collapse Arrow */}
+            <Box sx={{ textAlign: "center", marginTop: "8px" }}>
+                <IconButton onClick={toggleExpanded}>
+                    {expanded ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+                </IconButton>
+            </Box>
         </Box>
     );
 };
