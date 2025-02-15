@@ -1,7 +1,7 @@
 {
   "files": {
     "main.css": "/recipesMyWay/static/css/main.4c8cae2c.css",
-    "main.js": "/recipesMyWay/static/js/main.31fe45d5.js",
+    "main.js": "/recipesMyWay/static/js/main.029539e8.js",
     "static/js/685.be0b6a97.chunk.js": "/recipesMyWay/static/js/685.be0b6a97.chunk.js",
     "static/media/rubik-vinyl-latin-400-normal.woff": "/recipesMyWay/static/media/rubik-vinyl-latin-400-normal.250edfff990a5b3dd758.woff",
     "static/media/rubik-vinyl-latin-400-normal.woff2": "/recipesMyWay/static/media/rubik-vinyl-latin-400-normal.84f3dfdeaaec06fcbe3b.woff2",
@@ -18,6 +18,6 @@
   },
   "entrypoints": [
     "static/css/main.4c8cae2c.css",
-    "static/js/main.31fe45d5.js"
+    "static/js/main.029539e8.js"
   ]
 }
