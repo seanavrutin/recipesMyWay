@@ -1,0 +1,23 @@
+{
+  "files": {
+    "main.css": "/recipesMyWay/static/css/main.4c8cae2c.css",
+    "main.js": "/recipesMyWay/static/js/main.5324d4f4.js",
+    "static/js/685.be0b6a97.chunk.js": "/recipesMyWay/static/js/685.be0b6a97.chunk.js",
+    "static/media/rubik-vinyl-latin-400-normal.woff": "/recipesMyWay/static/media/rubik-vinyl-latin-400-normal.250edfff990a5b3dd758.woff",
+    "static/media/rubik-vinyl-latin-400-normal.woff2": "/recipesMyWay/static/media/rubik-vinyl-latin-400-normal.84f3dfdeaaec06fcbe3b.woff2",
+    "static/media/rubik-vinyl-latin-ext-400-normal.woff": "/recipesMyWay/static/media/rubik-vinyl-latin-ext-400-normal.f1789258925ccd3b8694.woff",
+    "static/media/rubik-vinyl-cyrillic-400-normal.woff": "/recipesMyWay/static/media/rubik-vinyl-cyrillic-400-normal.552f179f64c59e5b84f4.woff",
+    "static/media/rubik-vinyl-latin-ext-400-normal.woff2": "/recipesMyWay/static/media/rubik-vinyl-latin-ext-400-normal.a86ef2940dba112b6d73.woff2",
+    "static/media/rubik-vinyl-cyrillic-400-normal.woff2": "/recipesMyWay/static/media/rubik-vinyl-cyrillic-400-normal.2d95f860bea546a5f773.woff2",
+    "static/media/rubik-vinyl-cyrillic-ext-400-normal.woff": "/recipesMyWay/static/media/rubik-vinyl-cyrillic-ext-400-normal.375ab229cc8257a4d006.woff",
+    "static/media/rubik-vinyl-cyrillic-ext-400-normal.woff2": "/recipesMyWay/static/media/rubik-vinyl-cyrillic-ext-400-normal.68022d4f8c5345dfd76b.woff2",
+    "service-worker.js": "/recipesMyWay/service-worker.js",
+    "static/media/rubik-vinyl-hebrew-400-normal.woff": "/recipesMyWay/static/media/rubik-vinyl-hebrew-400-normal.ddaecbc0c6bd274906df.woff",
+    "static/media/rubik-vinyl-hebrew-400-normal.woff2": "/recipesMyWay/static/media/rubik-vinyl-hebrew-400-normal.9c98e01ce58aaad0cee3.woff2",
+    "index.html": "/recipesMyWay/index.html"
+  },
+  "entrypoints": [
+    "static/css/main.4c8cae2c.css",
+    "static/js/main.5324d4f4.js"
+  ]
+}
