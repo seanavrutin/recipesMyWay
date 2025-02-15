@@ -3,13 +3,13 @@ import { GoogleLogin } from "@react-oauth/google";
 import {jwtDecode} from "jwt-decode";
 import { Box, Typography } from "@mui/material";
 
-const Login = ({ onSuccess }) => {
+const Login = () => {
     const handleLoginSuccess = (credentialResponse) => {
         try {
             const decoded = jwtDecode(credentialResponse.credential);
             if (decoded.email_verified) {
                 localStorage.setItem("routs_auth", credentialResponse.credential);
-                onSuccess(decoded); // Pass the decoded data back to the parent
+                window.location.reload();
             } else {
                 alert("Email is not verified. Please verify your email.");
             }

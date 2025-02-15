@@ -8,4 +8,4 @@
 
 # Environment variables
 *.env
-*credentials
+/server/credentials.json

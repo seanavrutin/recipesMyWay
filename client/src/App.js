@@ -31,7 +31,7 @@ function App() {
                 <FontSizeProvider>
                     <ThemeProvider theme={theme}>
                         <CssBaseline />
-                        <Router>
+                        <Router basename="/recipesMyWay/">
                             <Routes>
                                 <Route
                                     dir="rtl"
