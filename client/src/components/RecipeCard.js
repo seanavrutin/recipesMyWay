@@ -35,7 +35,8 @@ const RecipeCard = ({ recipe, index, onEdit, onDelete }) => {
                     <Typography
                         sx={{
                             fontSize: fontSize * 1.2 + "px",
-                            userSelect: "none" // Disable text selection
+                            userSelect: "none", // Disable text selection
+                            cursor: "pointer", // Indicate clickability
                         }}
                         align="right"
                         onClick={handleToggleRecipe} // Expand/collapse recipe
@@ -60,7 +61,11 @@ const RecipeCard = ({ recipe, index, onEdit, onDelete }) => {
                 <CardContent>
                     {/* Ingredients Section */}
                     <Box
-                        sx={{ textAlign: "center", marginY: "8px" }}
+                        sx={{
+                            textAlign: "center",
+                            marginY: "8px",
+                            cursor: "pointer",
+                        }}
                         onClick={handleToggleIngredients} // Expand/collapse ingredients
                     >
                         <Box
@@ -68,6 +73,7 @@ const RecipeCard = ({ recipe, index, onEdit, onDelete }) => {
                                 height: "1px",
                                 backgroundColor: "#bbb",
                                 width: "100%",
+                                borderRadius: "2px",
                             }}
                         ></Box>
                         <Typography
@@ -88,6 +94,7 @@ const RecipeCard = ({ recipe, index, onEdit, onDelete }) => {
                                 height: "1px",
                                 backgroundColor: "#bbb",
                                 width: "100%",
+                                borderRadius: "2px",
                             }}
                         ></Box>
                     </Box>
@@ -115,9 +122,7 @@ const RecipeCard = ({ recipe, index, onEdit, onDelete }) => {
                                             borderRadius: "50%",
                                             display: "inline-block",
                                             flexShrink: 0, // Prevent shrinking of the circle
-                                            alignSelf: "center", // Vertically center the circle with the line
-                                            marginRight: "px", // Add margin between bullet and text
-                                            marginLeft: "10px", // Add margin between bullet and text
+                                            marginRight: "10px", // Add margin between bullet and text
                                         }}
                                     ></span>
                                     {ing}
@@ -128,7 +133,11 @@ const RecipeCard = ({ recipe, index, onEdit, onDelete }) => {
 
                     {/* Instructions Section */}
                     <Box
-                        sx={{ textAlign: "center", marginY: "16px" }}
+                        sx={{
+                            textAlign: "center",
+                            marginY: "16px",
+                            cursor: "pointer",
+                        }}
                         onClick={handleToggleInstructions} // Expand/collapse instructions
                     >
                         <Box
@@ -136,6 +145,7 @@ const RecipeCard = ({ recipe, index, onEdit, onDelete }) => {
                                 height: "1px",
                                 backgroundColor: "#bbb",
                                 width: "100%",
+                                borderRadius: "2px",
                             }}
                         ></Box>
                         <Typography
@@ -156,6 +166,7 @@ const RecipeCard = ({ recipe, index, onEdit, onDelete }) => {
                                 height: "1px",
                                 backgroundColor: "#bbb",
                                 width: "100%",
+                                borderRadius: "2px",
                             }}
                         ></Box>
                     </Box>
@@ -182,15 +193,12 @@ const RecipeCard = ({ recipe, index, onEdit, onDelete }) => {
                                             border: "1px solid #888",
                                             borderRadius: "50%",
                                             display: "inline-flex",
-                                            flexShrink: 0, // Prevent shrinking of the circle
-                                            alignSelf: "center", // Vertically center the circle with the line
                                             justifyContent: "center",
                                             alignItems: "center",
                                             fontSize: "12px",
                                             fontWeight: "bold",
                                             color: "#888",
-                                            marginRight: "5px", // Add margin between number and text
-                                            marginLeft: "10px", // Add margin between number and text
+                                            marginRight: "10px", // Add margin between number and text
                                         }}
                                     >
                                         {i + 1}
