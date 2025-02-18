@@ -54,7 +54,7 @@ const HomePage = () => {
             setLoading(true);
             setError(null);
 
-            const response = await axios.get(`http://10.100.102.5:3000/api/recipes/${email}`);
+            const response = await axios.get(`https://recipesmyway.duckdns.org:3000/api/recipes/${email}`);
             const fetchedRecipes = response.data;
 
             const extractedCategories = Array.from(

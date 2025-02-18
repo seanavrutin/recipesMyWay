@@ -6,7 +6,7 @@ const RecipeRoutes = require("./routes/RecipeRoutes");
 const BackupRoutes = require("./routes/BackupRoutes");
 
 const cors = require("cors");
-const allowedOrigins = ["http://localhost:4000", "http://10.100.102.5:4000", "http://your-production-domain.com"];
+const allowedOrigins = ["http://localhost:4000", "http://10.100.102.5:4000", "https://seanavrutin.github.io","https://recipesmyway.duckdns.org:4000"];
 
 
 

@@ -21,6 +21,7 @@
     "express": "^4.21.2",
     "fs": "^0.0.1-security",
     "googleapis": "^144.0.0",
+    "https": "^1.0.0",
     "openai": "^4.81.0",
     "stream": "^0.0.3"
   },
