@@ -1,31 +1,6 @@
 version: '3'
 
 services:
-  nginx:
-    image: nginx:latest
-    container_name: nginx_proxy
-    restart: always
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx:/etc/nginx/conf.d
-      - ./certbot/www:/var/www/certbot
-      - ./certbot/conf:/etc/letsencrypt
-    depends_on:
-      - client
-      - server
-
-  client:
-    build:
-      context: ./client
-    container_name: client
-    restart: always
-    ports:
-      - "4000:4000"
-    depends_on:
-      - server
-
   server:
     build:
       context: ./server
