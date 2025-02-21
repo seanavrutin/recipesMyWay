@@ -9,6 +9,9 @@ import InfiniteScroll from "react-infinite-scroll-component";
 import { Box, Typography, CircularProgress, Button } from "@mui/material";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import Login from "../components/Login";
+import UserMenu from "../components/UserMenu";
+import AddRecipe from "../components/AddRecipe";
+
 
 const HomePage = () => {
     const [recipes, setRecipes] = useState([]);
@@ -24,7 +27,8 @@ const HomePage = () => {
     const fetchCalled = useRef(false);
 
     useEffect(() => {
-        const token = localStorage.getItem("routs_auth");
+        // const token = localStorage.getItem("routs_auth");
+        const token = "eyJhbGciOiJSUzI1NiIsImtpZCI6IjVkMTJhYjc4MmNiNjA5NjI4NWY2OWU0OGFlYTk5MDc5YmI1OWNiODYiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhenAiOiI4NDk5NDMzNDQ1OTUtN3FsY2NuZWVlMWZtc3NzNGozcDdxYTA1cmw3YnRyaDUuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJhdWQiOiI4NDk5NDMzNDQ1OTUtN3FsY2NuZWVlMWZtc3NzNGozcDdxYTA1cmw3YnRyaDUuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJzdWIiOiIxMTA4Mzc0MzkwNzE5NjE4MjEyNzAiLCJlbWFpbCI6InNlYW5hdnJ1dGluQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJuYmYiOjE3Mzk2MzIzODcsIm5hbWUiOiJTZWFuIEF2cnV0aW4iLCJwaWN0dXJlIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvQUNnOG9jSWljanVLUnd5Sk9iS3JvOGdrV3lsZUFXSnMzMXQwcml3X1E0YUQ0T0VwR1JKYk9yTT1zOTYtYyIsImdpdmVuX25hbWUiOiJTZWFuIiwiZmFtaWx5X25hbWUiOiJBdnJ1dGluIiwiaWF0IjoxNzM5NjMyNjg3LCJleHAiOjE3Mzk2MzYyODcsImp0aSI6IjQ2OWNiM2IyYjJiYTRhMjYwYzJkNzBjZmVhZmZjMzY3MTM3ZmQxZDQifQ.U1m3Tknwf-Bk4kS0YQpjuaMJJcXlLs_X-9XeS_Gf_YGI6JIYGzE3da0Lgta1JpUkZp5HwYspNalitHkGojK_s0xToSjfYaDStv0Gf-2tSZ_9oaapGE2OdMEIKMIcLJrnBrtEdLSFOAvkOGTjNz0TGa8WU2DkvOyKBmcQq7rlmIVmZbJn2rN61issCbPzlJZ-lBy-K7LS3uFfIrhr7f3VZRezn5reP3DwJ1aCOhso9tL5-Nt5QltXNv6-8l9mP6X9sX0H-HYsWEbm7KbVQXTk5n1ZApNI_CmHo8tGombHUKfs_4q1pVCXd-1izxc58FJBy1y28aihJgx8Kad9-sulgg";
 
         if (token) {
             try {
@@ -54,7 +58,8 @@ const HomePage = () => {
             setLoading(true);
             setError(null);
 
-            const response = await axios.get(`https://api.recipesmyway.uk/api/recipes/${email}`);
+            const SERVER = process.env.REACT_APP_SERVER_ADDRESS;
+            const response = await axios.get(SERVER+`/api/recipes/${email}`);
             const fetchedRecipes = response.data;
 
             const extractedCategories = Array.from(
@@ -118,6 +123,10 @@ const HomePage = () => {
         setFilteredRecipes(filtered);
     };
 
+    const handleNewRecipe = (recipe) => {
+        // setRecipes((prev) => [recipe, ...prev]);
+    };
+
     if (!user) {
         return (
             <Box sx={{ padding: "16px", textAlign: "center" }}>
@@ -141,19 +150,25 @@ const HomePage = () => {
     }
 
     return (
-        <Box sx={{ padding: "16px" }}>
-            <Typography
-                variant="h4"
-                align="center"
-                gutterBottom
-                sx={{
-                    fontFamily: "'Rubik Vinyl', cursive",
-                    fontSize: "2.5rem",
-                    direction: "rtl",
-                }}
-            >
-                מתכונים
-            </Typography>
+        <Box sx={{ padding: "8px" }}>
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>    
+                <UserMenu user={user} />
+                <Typography
+                    variant="h4"
+                    align="center"
+                    gutterBottom
+                    sx={{
+                        fontFamily: "'Rubik Vinyl', cursive",
+                        fontSize: "2.5rem",
+                        direction: "rtl",
+                        marginBottom: "0px"
+                    }}
+                >
+                    מתכונים
+                </Typography>
+                <AddRecipe onRecipeAdded={handleNewRecipe}/>
+            </Box>
+            <br></br>
 
             {!loading && !error && recipes.length > 0 && (
                 <>

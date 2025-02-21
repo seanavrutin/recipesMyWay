@@ -4,7 +4,7 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 
 const FilterBar = ({ categories, selectedCategories, onCategoryChange }) => {
-    const [expanded, setExpanded] = useState(true); // State to toggle expanded view
+    const [expanded, setExpanded] = useState(false); // State to toggle expanded view
 
     const toggleExpanded = () => {
         setExpanded(!expanded);

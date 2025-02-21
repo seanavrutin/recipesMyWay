@@ -38,7 +38,7 @@ function App() {
                                     path="/"
                                     element={
                                         <div dir="rtl">
-                                            <FontSizeController />
+                                            {/* <FontSizeController /> */}
                                             <Background />
                                             <HomePage />
                                         </div>
