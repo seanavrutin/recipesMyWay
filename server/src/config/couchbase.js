@@ -17,19 +17,12 @@ class CouchbaseService {
             this.bucket = this.cluster.bucket("Recipes");
             this.collection = this.bucket.defaultCollection();
 
-            console.log("Connected to Couchbase successfully!");
         } catch (error) {
             console.error("Couchbase connection failed:", error);
         }
     }
 
-    /**
-     * Save a recipe to Couchbase
-     * @param {string} phoneNumber - User's phone number
-     * @param {Array} recipeJson - Recipe JSON
-     * @returns {string|null} - Document ID or null if failed
-     */
-    async saveRecipe(phoneNumber, recipeJson) {
+    async saveRecipe(userName, recipeJson) {
         try {
             const titleEntry = recipeJson.find(item => item.key === "כותרת");
             if (!titleEntry) {
@@ -37,10 +30,9 @@ class CouchbaseService {
             }
             const recipeName = titleEntry.value.replace(/\s+/g, "_"); // Replace spaces with underscores
 
-            const docId = `${phoneNumber}_${recipeName}`;
+            const docId = `Recipe_${userName}_${recipeName}`;
             await this.collection.upsert(docId, { recipe: recipeJson });
 
-            console.log(`Recipe saved: ${docId}`);
             return docId;
         } catch (error) {
             console.error("Error saving recipe:", error);
@@ -48,16 +40,11 @@ class CouchbaseService {
         }
     }
 
-    /**
-     * Get all recipes for a specific user
-     * @param {string} phoneNumber - User's phone number
-     * @returns {Promise<Array>} - List of recipes
-     */
-    async getRecipesByUser(phoneNumber) {
+    async getRecipesByUser(userName) {
         try {
             const query = `SELECT META(r).id, r.* 
                            FROM \`Recipes\` r 
-                           WHERE META(r).id LIKE '${phoneNumber}_%'`;
+                           WHERE META(r).id LIKE 'Recipe_${userName}_%'`;
             const result = await this.cluster.query(query);
             return result.rows.map(row => ({
                 id: row.id,
@@ -69,14 +56,54 @@ class CouchbaseService {
         }
     }
 
-    async fetchAllDocuments() {
+    async getUserInfo(userName) {
         try {
-            const query = `SELECT META().id, * FROM \`Recipes\``;
-            const result = await this.cluster.query(query);
-            return result.rows; // Return all documents
+            const docId = `User_${userName}`;
+            const result = await this.collection.get(docId);
+            return result.content;
         } catch (error) {
-            console.error("Error fetching documents from Couchbase:", error);
-            throw error;
+            console.error("Error fetching user info:", error);
+            return null;
+        }
+    }
+
+    async addUser(userName, given_name, family_name ) {
+        try {
+            const docId = `User_${userName}`;
+            const userDoc = {
+                given_name: given_name,
+                family_name: family_name,
+                familyMembers: []
+            };
+            await this.collection.upsert(docId, userDoc);
+            return userDoc;
+        } catch (error) {
+            console.error("Error adding user:", error);
+            return null;
+        }
+    }
+
+    async modifyFamilyMember(mainUser, modifiedFamilyMember, isAllowed) {
+        try {
+            const docId = `User_${mainUser}`;
+            const result = await this.collection.get(docId);
+            const userData = result.content;
+
+            let familyMembers = userData.familyMembers || [];
+            const index = familyMembers.findIndex(member => member.memberName === modifiedFamilyMember);
+            
+            if (index !== -1) {
+                familyMembers[index].allowedToSeeMyRecipes = isAllowed;
+            } else {
+                familyMembers.push({ memberName: modifiedFamilyMember, allowedToSeeMyRecipes: isAllowed });
+            }
+            
+            userData.familyMembers = familyMembers;
+            await this.collection.upsert(docId, userData);
+            return userData;
+        } catch (error) {
+            console.error("Error modifying family member:", error);
+            return null;
         }
     }
 }

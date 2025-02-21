@@ -63,6 +63,29 @@ class ChatGPTService {
             return 'מצטער, לא הצלחתי לעבד את המתכון.';
         }
     }
+
+    async translateNameToHebrew(inputJson) {
+      try {
+          const prompt = `Translate the following name fields to Hebrew and return only JSON:
+          ${JSON.stringify(inputJson)}`;
+
+          const response = await this.openai.chat.completions.create({
+              model: 'gpt-4o',
+              messages: [{ role: 'user', content: prompt }],
+              max_tokens: 100,
+          });
+
+          let responseText = response.choices[0].message.content.trim();
+
+            const jsonStart = responseText.indexOf("{");
+            const jsonEnd = responseText.lastIndexOf("}") + 1;
+            const jsonText = responseText.substring(jsonStart, jsonEnd);
+            return JSON.parse(jsonText);
+      } catch (error) {
+          console.error('Error translating name:', error.response?.data || error.message);
+          return null;
+      }
+  }
 }
 
 module.exports = ChatGPTService;
