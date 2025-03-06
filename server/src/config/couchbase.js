@@ -83,7 +83,7 @@ class CouchbaseService {
         }
     }
 
-    async modifyFamilyMember(mainUser, modifiedFamilyMember, isAllowed) {
+    async modifyFamilyMember(mainUser, modifiedFamilyMember, allowedToSeeMyRecipes, allowedToSeeTheirRecipes) {
         try {
             const docId = `User_${mainUser}`;
             const result = await this.collection.get(docId);
@@ -93,9 +93,32 @@ class CouchbaseService {
             const index = familyMembers.findIndex(member => member.memberName === modifiedFamilyMember);
             
             if (index !== -1) {
-                familyMembers[index].allowedToSeeMyRecipes = isAllowed;
+                familyMembers[index].allowedToSeeMyRecipes = allowedToSeeMyRecipes;
+                familyMembers[index].allowedToSeeTheirRecipes = allowedToSeeTheirRecipes;
             } else {
-                familyMembers.push({ memberName: modifiedFamilyMember, allowedToSeeMyRecipes: isAllowed });
+                familyMembers.push({ memberName: modifiedFamilyMember, allowedToSeeMyRecipes: allowedToSeeMyRecipes, allowedToSeeTheirRecipes: allowedToSeeTheirRecipes });
+            }
+            
+            userData.familyMembers = familyMembers;
+            await this.collection.upsert(docId, userData);
+            return userData;
+        } catch (error) {
+            console.error("Error modifying family member:", error);
+            return null;
+        }
+    }
+
+    async removeFamilyMember(mainUser, modifiedFamilyMember) {
+        try {
+            const docId = `User_${mainUser}`;
+            const result = await this.collection.get(docId);
+            const userData = result.content;
+
+            let familyMembers = userData.familyMembers || [];
+            const index = familyMembers.findIndex(member => member.memberName === modifiedFamilyMember);
+            
+            if (index !== -1) {
+                familyMembers.splice(index, 1);
             }
             
             userData.familyMembers = familyMembers;

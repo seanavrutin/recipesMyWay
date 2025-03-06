@@ -1,25 +1,40 @@
-import React, { useState } from "react";
+import React, { useState,useEffect } from "react";
 import {
     Box,
     IconButton,
     Menu,
     MenuItem,
-    Divider,
+    Chip,
     Avatar,
     Slider,
     Dialog,
     DialogTitle,
     DialogContent,
     DialogActions,
-    Button
+    Button,
+    TextField,
+    Typography,
+    Badge,
+    CircularProgress
 } from "@mui/material";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import HourglassEmptyIcon from "@mui/icons-material/HourglassEmpty";
+import CancelIcon from "@mui/icons-material/Cancel";
+import CloseIcon from "@mui/icons-material/Close";
 import { useFontSize } from "../context/FontSizeContext";
+import axios from "axios";
 
-const UserMenu = ({ user }) => {
+
+const UserMenu = ({ user,setUser }) => {
     const [menuAnchor, setMenuAnchor] = useState(null);
     const [fontSizeOpen, setFontSizeOpen] = useState(false);
     const { fontSize, setFontSize } = useFontSize(); // Restore Font Size Control
     const [familyModalOpen, setFamilyModalOpen] = useState(false);
+    const [newMemberEmail, setNewMemberEmail] = useState("");
+    const [loadingFamily, setLoadingFamily] = useState(false);
+    const [errorFamily, setErrorFamily] = useState(false);
+    const [pendingRequests, setPendingRequests] = useState([]);
+
 
     const handleMenuOpen = (event) => setMenuAnchor(event.currentTarget);
     const handleMenuClose = () => {
@@ -35,11 +50,130 @@ const UserMenu = ({ user }) => {
 
     const handleFamilyModalClose = () => setFamilyModalOpen(false);
 
+    const getStatusIcon = (status) => {
+        if (status === "true") return <CheckCircleIcon sx={{ color: "green", fontSize: "1rem", ml: 1 }} />;
+        if (status === "pending") return <HourglassEmptyIcon sx={{ color: "orange", fontSize: "1rem", ml: 1 }} />;
+        return <CancelIcon sx={{ color: "red", fontSize: "1rem", ml: 1 }} />;
+    };
+
+    const handleRemoveFamilyMember = async (email) => {
+        setUser(prevUser => ({
+            ...prevUser,
+            familyMembers: prevUser.familyMembers.filter(member => member.memberName !== email)
+        }));
+
+        setErrorFamily("");
+        try {
+            setLoadingFamily(true);
+            const SERVER = process.env.REACT_APP_SERVER_ADDRESS;
+            await axios.post(`${SERVER}/api/user/deleteFamily`, {
+                mainUser: user.email,
+                modifiedFamilyMember: email,
+            });
+            await axios.post(`${SERVER}/api/user/deleteFamily`, {
+                mainUser: email,
+                modifiedFamilyMember: user.email,
+            });
+        } catch (error) {
+            console.error("Error removing family member:", error);
+            setErrorFamily("שגיאה בהסרת בן משפחה. נסה שוב.");
+        }
+        finally {
+            setLoadingFamily(false);
+        }
+    };
+    const handleAddFamilyMember = async () => {
+        if (!newMemberEmail.trim()) return;
+        setLoadingFamily(true);
+        setErrorFamily("");
+
+        try {
+            const SERVER = process.env.REACT_APP_SERVER_ADDRESS;
+            await axios.get(`${SERVER}/api/user/${newMemberEmail}`);
+
+            // Simulating API call to add family member
+            const newMember = { memberName: newMemberEmail, allowedToSeeMyRecipes: "true", allowedToSeeTheirRecipes: "pending" };
+
+            setUser(prevUser => ({
+                ...prevUser,
+                familyMembers: [...prevUser.familyMembers, newMember]
+            }));
+
+            await axios.put(`${SERVER}/api/user/family`, {
+                mainUser: user.email,
+                modifiedFamilyMember: newMemberEmail,
+                allowedToSeeMyRecipes: "true",
+                allowedToSeeTheirRecipes: "pending"
+            });
+
+            await axios.put(`${SERVER}/api/user/family`, {
+                mainUser: newMemberEmail,
+                modifiedFamilyMember: user.email,
+                allowedToSeeMyRecipes: "pending",
+                allowedToSeeTheirRecipes: "true"
+            });
+
+            setNewMemberEmail("");
+        } catch (error) {
+            if(error.status==404){
+                setErrorFamily("האימייל לא נמצא במערכת.");
+            }
+            else{
+                console.error("Error adding family member:", error);
+                setErrorFamily("שגיאה בהוספת בן משפחה. נסה שוב.");
+            }
+        } finally {
+            setLoadingFamily(false);
+        }
+    };
+
+    const handlePendingRequest = async (email,status) => {
+        try {
+            const SERVER = process.env.REACT_APP_SERVER_ADDRESS;
+            await axios.put(`${SERVER}/api/user/family`, {
+                mainUser: user.email,
+                modifiedFamilyMember: email,
+                allowedToSeeMyRecipes: status,
+                allowedToSeeTheirRecipes: status
+            });
+
+            await axios.put(`${SERVER}/api/user/family`, {
+                mainUser: email,
+                modifiedFamilyMember: user.email,
+                allowedToSeeMyRecipes: status,
+                allowedToSeeTheirRecipes: status
+            });
+
+            setUser(prevUser => ({
+                ...prevUser,
+                familyMembers: prevUser.familyMembers.map(member => 
+                    member.memberName === email ? { ...member, allowedToSeeMyRecipes: "true" } : member
+                )
+            }));
+
+            // setPendingRequests(pendingRequests.filter(member => member.memberName !== email));
+        } catch (error) {
+            console.error("Error approving request:", error);
+        }
+    };
+
+    useEffect(() => {
+        console.log(user);
+        console.log(user.familyMembers)
+        setPendingRequests(user.familyMembers?.filter(member => member.allowedToSeeMyRecipes === "pending") || []);
+    }, [user]);
+
     return (
         <Box>
             {/* Profile Button */}
             <IconButton onClick={handleMenuOpen}>
-                <Avatar src={user?.picture} alt={user?.name} />
+                <Badge
+                    color="warning"
+                    variant="dot"
+                    invisible={pendingRequests.length === 0}
+                >
+                    <Avatar src={user?.picture} alt={user?.name} />
+                </Badge>
             </IconButton>
 
             {/* Dropdown Menu */}
@@ -58,9 +192,10 @@ const UserMenu = ({ user }) => {
                     }
                 }}
             >
+                <Box>
                 {/* User Name */}
                 <MenuItem disabled sx={{ fontWeight: "bold", justifyContent: "left", minHeight: "5px" }}>
-                    {user?.name}
+                    {user.hebName}
                 </MenuItem>
                 <hr sx={{ backgroundColor: "#ccc" }}></hr>
 
@@ -87,6 +222,31 @@ const UserMenu = ({ user }) => {
                         />
                     </Box>
                 )}
+                <MenuItem onClick={() => {localStorage.removeItem("recipesMyWay"); window.location.reload();}} sx={{ justifyContent: "left", minHeight: "5px"}}>
+                    התנתק
+                </MenuItem>
+                {pendingRequests.length > 0 && (
+                    <>
+                        <hr sx={{ backgroundColor: "#ccc" }} />
+                        <Typography variant="body2" sx={{ textAlign: "center", fontWeight: "bold", mt: 1 }}>
+                            בקשות ממתינות
+                        </Typography>
+                        {pendingRequests.map((request) => (
+                            <Box key={request.memberName} sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", px: 2 }}>
+                                <Typography>{request.memberName}</Typography>
+                                <Box>
+                                    <IconButton size="small" color="success" onClick={() => handlePendingRequest(request.memberName,"true")}>
+                                        <CheckCircleIcon />
+                                    </IconButton>
+                                    <IconButton size="small" color="error" onClick={() => handlePendingRequest(request.memberName,"false")}>
+                                        <CancelIcon />
+                                    </IconButton>
+                                </Box>
+                            </Box>
+                        ))}
+                    </>
+                )}
+                </Box>
             </Menu>
             {/* My Family Modal */}
             <Dialog open={familyModalOpen} onClose={handleFamilyModalClose}>
@@ -94,10 +254,37 @@ const UserMenu = ({ user }) => {
                     המשפחה שלי
                 </DialogTitle>
                 <DialogContent>
-                    <p>כאן נוכל להוסיף תוכן בהמשך...</p>
+                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: 2 }}>
+                    {user?.familyMembers?.map((member) => (
+                        <Chip
+                            key={member.memberName}
+                            label={member.memberName}
+                            onDelete={() => handleRemoveFamilyMember(member.memberName)}
+                            deleteIcon={<CloseIcon sx={{ fontSize: "1rem" }} />}
+                            icon={getStatusIcon(member.allowedToSeeTheirRecipes)}
+                            sx={{ direction: "ltr" }}
+                        />
+                    ))}
+                </Box>
+                <TextField
+                    fullWidth
+                    variant="outlined"
+                    placeholder="הזן אימייל של בן משפחה"
+                    value={newMemberEmail}
+                    onChange={(e) => setNewMemberEmail(e.target.value)}
+                    sx={{ direction: "ltr" }}
+                />
+
+                {errorFamily && <Typography color="error" sx={{ direction: "ltr" }}>{errorFamily}</Typography>}
+                {loadingFamily && <CircularProgress size={24} sx={{ display: "block", margin: "auto", direction: "ltr" }} />}
+
+                <Typography variant="body2" sx={{ mt: 1, color: "#666", direction: "ltr" }}>
+                    כאשר תוסיף בן משפחה, הוא יוכל לראות את המתכונים שלך. אך כדי לראות את המתכונים שלו, עליו לאשר אותך.
+                </Typography>
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleFamilyModalClose} variant="outlined">סגור</Button>
+                    <Button onClick={handleAddFamilyMember} variant="contained" disabled={loadingFamily}>הוסף</Button>
                 </DialogActions>
             </Dialog>
         </Box>

@@ -27,21 +27,22 @@ const HomePage = () => {
     const fetchCalled = useRef(false);
 
     useEffect(() => {
-        // const token = localStorage.getItem("routs_auth");
-        const token = "eyJhbGciOiJSUzI1NiIsImtpZCI6IjVkMTJhYjc4MmNiNjA5NjI4NWY2OWU0OGFlYTk5MDc5YmI1OWNiODYiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhenAiOiI4NDk5NDMzNDQ1OTUtN3FsY2NuZWVlMWZtc3NzNGozcDdxYTA1cmw3YnRyaDUuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJhdWQiOiI4NDk5NDMzNDQ1OTUtN3FsY2NuZWVlMWZtc3NzNGozcDdxYTA1cmw3YnRyaDUuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJzdWIiOiIxMTA4Mzc0MzkwNzE5NjE4MjEyNzAiLCJlbWFpbCI6InNlYW5hdnJ1dGluQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJuYmYiOjE3Mzk2MzIzODcsIm5hbWUiOiJTZWFuIEF2cnV0aW4iLCJwaWN0dXJlIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvQUNnOG9jSWljanVLUnd5Sk9iS3JvOGdrV3lsZUFXSnMzMXQwcml3X1E0YUQ0T0VwR1JKYk9yTT1zOTYtYyIsImdpdmVuX25hbWUiOiJTZWFuIiwiZmFtaWx5X25hbWUiOiJBdnJ1dGluIiwiaWF0IjoxNzM5NjMyNjg3LCJleHAiOjE3Mzk2MzYyODcsImp0aSI6IjQ2OWNiM2IyYjJiYTRhMjYwYzJkNzBjZmVhZmZjMzY3MTM3ZmQxZDQifQ.U1m3Tknwf-Bk4kS0YQpjuaMJJcXlLs_X-9XeS_Gf_YGI6JIYGzE3da0Lgta1JpUkZp5HwYspNalitHkGojK_s0xToSjfYaDStv0Gf-2tSZ_9oaapGE2OdMEIKMIcLJrnBrtEdLSFOAvkOGTjNz0TGa8WU2DkvOyKBmcQq7rlmIVmZbJn2rN61issCbPzlJZ-lBy-K7LS3uFfIrhr7f3VZRezn5reP3DwJ1aCOhso9tL5-Nt5QltXNv6-8l9mP6X9sX0H-HYsWEbm7KbVQXTk5n1ZApNI_CmHo8tGombHUKfs_4q1pVCXd-1izxc58FJBy1y28aihJgx8Kad9-sulgg";
-
-        if (token) {
+        const data = JSON.parse(localStorage.getItem("recipesMyWay"));
+        // const data={};
+        // data.token = "eyJhbGciOiJSUzI1NiIsImtpZCI6IjVkMTJhYjc4MmNiNjA5NjI4NWY2OWU0OGFlYTk5MDc5YmI1OWNiODYiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhenAiOiI4NDk5NDMzNDQ1OTUtN3FsY2NuZWVlMWZtc3NzNGozcDdxYTA1cmw3YnRyaDUuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJhdWQiOiI4NDk5NDMzNDQ1OTUtN3FsY2NuZWVlMWZtc3NzNGozcDdxYTA1cmw3YnRyaDUuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJzdWIiOiIxMTA4Mzc0MzkwNzE5NjE4MjEyNzAiLCJlbWFpbCI6InNlYW5hdnJ1dGluQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJuYmYiOjE3Mzk2MzIzODcsIm5hbWUiOiJTZWFuIEF2cnV0aW4iLCJwaWN0dXJlIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvQUNnOG9jSWljanVLUnd5Sk9iS3JvOGdrV3lsZUFXSnMzMXQwcml3X1E0YUQ0T0VwR1JKYk9yTT1zOTYtYyIsImdpdmVuX25hbWUiOiJTZWFuIiwiZmFtaWx5X25hbWUiOiJBdnJ1dGluIiwiaWF0IjoxNzM5NjMyNjg3LCJleHAiOjE3Mzk2MzYyODcsImp0aSI6IjQ2OWNiM2IyYjJiYTRhMjYwYzJkNzBjZmVhZmZjMzY3MTM3ZmQxZDQifQ.U1m3Tknwf-Bk4kS0YQpjuaMJJcXlLs_X-9XeS_Gf_YGI6JIYGzE3da0Lgta1JpUkZp5HwYspNalitHkGojK_s0xToSjfYaDStv0Gf-2tSZ_9oaapGE2OdMEIKMIcLJrnBrtEdLSFOAvkOGTjNz0TGa8WU2DkvOyKBmcQq7rlmIVmZbJn2rN61issCbPzlJZ-lBy-K7LS3uFfIrhr7f3VZRezn5reP3DwJ1aCOhso9tL5-Nt5QltXNv6-8l9mP6X9sX0H-HYsWEbm7KbVQXTk5n1ZApNI_CmHo8tGombHUKfs_4q1pVCXd-1izxc58FJBy1y28aihJgx8Kad9-sulgg";
+        if (data?.token) {
             try {
-                const decoded = jwtDecode(token);
+                const decoded = jwtDecode(data.token);
                 if (decoded.email_verified) {
-                    setUser(decoded);
-                } else {
+                    fetchUser(decoded);
+                } 
+                else {
                     console.warn("Email not verified");
-                    localStorage.removeItem("routs_auth");
+                    localStorage.removeItem("recipesMyWay");
                 }
             } catch (error) {
                 console.error("Failed to decode token:", error);
-                localStorage.removeItem("routs_auth");
+                localStorage.removeItem("recipesMyWay");
             }
         }
     }, []);
@@ -49,7 +50,7 @@ const HomePage = () => {
     useEffect(() => {
         if (user && !fetchCalled.current) {
             fetchCalled.current = true;
-            fetchRecipes(user.email); // Assuming `email` is used as the identifier
+            fetchRecipes(user.email);
         }
     }, [user]);
 
@@ -80,6 +81,23 @@ const HomePage = () => {
             setRecipes([]);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchUser = async (decoded) => {
+        try {
+            const SERVER = process.env.REACT_APP_SERVER_ADDRESS;
+            const userResponse = await axios.get(`${SERVER}/api/user/${decoded.email}`);
+            decoded.hebName=userResponse.data.name;
+            decoded.familyMembers = userResponse.data.familyMembers;
+            setUser(decoded);
+
+            const localData = JSON.parse(localStorage.getItem("recipesMyWay"));
+            localData.name = userResponse.data.name;
+            localData.familyMembers = userResponse.data.familyMembers;
+            localStorage.setItem("recipesMyWay", JSON.stringify(localData));
+        } catch (error) {
+            console.error("Error fetching user data", error);
         }
     };
 
@@ -124,7 +142,9 @@ const HomePage = () => {
     };
 
     const handleNewRecipe = (recipe) => {
-        // setRecipes((prev) => [recipe, ...prev]);
+        console.log(recipes);
+        console.log(recipe);
+        setRecipes((prev) => [{id:"Recipe_"+user.email+"_"+recipe["כותרת"],recipe:recipe}, ...prev]);
     };
 
     if (!user) {
@@ -152,7 +172,7 @@ const HomePage = () => {
     return (
         <Box sx={{ padding: "8px" }}>
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>    
-                <UserMenu user={user} />
+                <UserMenu user={user} setUser={setUser} />
                 <Typography
                     variant="h4"
                     align="center"
@@ -166,7 +186,7 @@ const HomePage = () => {
                 >
                     מתכונים
                 </Typography>
-                <AddRecipe onRecipeAdded={handleNewRecipe}/>
+                <AddRecipe user={user} onRecipeAdded={handleNewRecipe}/>
             </Box>
             <br></br>
 

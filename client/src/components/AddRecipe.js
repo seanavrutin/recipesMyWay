@@ -13,13 +13,15 @@ import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
 import SendIcon from "@mui/icons-material/Send";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import axios from "axios";
 
-const AddRecipe = ({ onRecipeAdded }) => {
+
+const AddRecipe = ({ user,onRecipeAdded }) => {
     const [open, setOpen] = useState(false);
     const [recipeText, setRecipeText] = useState("");
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
-    const [newRecipe, setNewRecipe] = useState(null);
+    const [finishedLoading, setFinishedLoading] = useState(false);
 
     const handleToggle = () => {
         setOpen(!open);
@@ -35,26 +37,31 @@ const AddRecipe = ({ onRecipeAdded }) => {
         setRecipeText("");
         setLoading(false);
         setSuccess(false);
-        setNewRecipe(null);
     };
 
     const handleCreate = async () => {
         setLoading(true);
         setSuccess(false);
 
-        // Simulating API call delay
-        setTimeout(() => {
-            const mockRecipe = {
-                id: Date.now(),
-                title: "מתכון לדוגמא",
-                content: recipeText
-            };
-
-            setNewRecipe(mockRecipe);
-            onRecipeAdded(mockRecipe);
+        const SERVER = process.env.REACT_APP_SERVER_ADDRESS;
+        try{
+            let response = await axios.post(`${SERVER}/api/recipes`, {
+                userName: user.email,
+                text: recipeText
+            });
+            console.log(response);
+            onRecipeAdded(response.data);
             setLoading(false);
             setSuccess(true);
-        }, 2000);
+        }
+        catch(error){
+            setLoading(false);
+            setSuccess(false);
+        }
+        finally{
+            setFinishedLoading(true);
+        }
+
     };
 
     return (
@@ -158,24 +165,11 @@ const AddRecipe = ({ onRecipeAdded }) => {
                             </Typography>
                         </Box>
                     )}
-
-                    {/* Display Created Recipe */}
-                    {newRecipe && (
-                        <Box
-                            sx={{
-                                marginTop: 2,
-                                padding: "10px",
-                                backgroundColor: "#ffffff",
-                                borderRadius: "8px",
-                                boxShadow: 2,
-                                width: "80%",
-                                textAlign: "center",
-                            }}
-                        >
-                            <Typography variant="h6" sx={{ fontWeight: "bold" }}>
-                                {newRecipe.title}
+                    {!success && finishedLoading && (
+                        <Box sx={{ marginTop: 2, display: "flex", flexDirection: "column", alignItems: "center" }}>
+                            <Typography variant="body2" sx={{ fontWeight: "bold", marginTop: 1, color: "red" }}>
+                                תקלה בשמירת המתכון, נסה שוב
                             </Typography>
-                            <Typography variant="body2">{newRecipe.content}</Typography>
                         </Box>
                     )}
                 </Box>

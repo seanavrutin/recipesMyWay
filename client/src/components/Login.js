@@ -8,7 +8,7 @@ const Login = () => {
         try {
             const decoded = jwtDecode(credentialResponse.credential);
             if (decoded.email_verified) {
-                localStorage.setItem("routs_auth", credentialResponse.credential);
+                localStorage.setItem("recipesMyWay", JSON.stringify({token:credentialResponse.credential}));
                 window.location.reload();
             } else {
                 alert("Email is not verified. Please verify your email.");
