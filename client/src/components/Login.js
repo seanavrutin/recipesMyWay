@@ -5,12 +5,12 @@ import { Box, Typography } from "@mui/material";
 import axios from "axios";
 
 const Login = () => {
-    const handleLoginSuccess = (credentialResponse) => {
+    const handleLoginSuccess = async (credentialResponse) => {
         try {
             const decoded = jwtDecode(credentialResponse.credential);
             if (decoded.email_verified) {
                 localStorage.setItem("recipesMyWay", JSON.stringify({token:credentialResponse.credential}));
-                checkIfUserExists(decoded);
+                await checkIfUserExists(decoded);
                 window.location.reload();
             } else {
                 alert("Email is not verified. Please verify your email.");

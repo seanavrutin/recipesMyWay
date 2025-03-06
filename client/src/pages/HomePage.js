@@ -88,7 +88,7 @@ const HomePage = () => {
         try {
             const SERVER = process.env.REACT_APP_SERVER_ADDRESS;
             const userResponse = await axios.get(`${SERVER}/api/user/${decoded.email}`);
-            decoded.hebName=userResponse.data.name;
+            decoded.hebName=userResponse.data.given_name+" "+userResponse.data.family_name;
             decoded.familyMembers = userResponse.data.familyMembers;
             setUser(decoded);
 
