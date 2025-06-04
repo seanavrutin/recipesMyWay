@@ -22,6 +22,9 @@ const HomePage = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [user, setUser] = useState(null); // Decoded user from localStorage
+    const [sortType, setSortType] = useState("alphabet"); // "alphabet" or "category"
+    const [sortDirection, setSortDirection] = useState("asc"); // "asc" or "desc"
+
 
     const navigate = useNavigate();
     const fetchCalled = useRef(false);
@@ -229,6 +232,26 @@ const HomePage = () => {
                         selectedCategories={selectedCategories}
                         onCategoryChange={handleCategoryChange}
                     />
+                    <Box sx={{ display: "flex"}}>
+                        <Button
+                            variant={sortType === "alphabet" ? "outlined" : "text"}
+                            onClick={() => {
+                            setSortType("alphabet");
+                            setSortDirection(prev => prev === "asc" ? "desc" : "asc");
+                            }}
+                            sx={{ minWidth: "fit-content", padding: "4px 8px" }}
+                        >
+                            א,ב {sortType === "alphabet" && (sortDirection === "asc" ? "↓" : "↑")}
+                        </Button>
+
+                        <Button
+                            variant={sortType === "category" ? "outlined" : "text"}
+                            onClick={() => setSortType("category")}
+                            sx={{ minWidth: "fit-content", padding: "4px 8px" }}
+                        >
+                            לפי קטגוריה
+                        </Button>
+                        </Box>
                 </>
             )}
 
@@ -293,17 +316,54 @@ const HomePage = () => {
                     hasMore={false}
                     loader={<Typography align="center">טוען...</Typography>}
                 >
-                    {filteredRecipes.map((recipe, index) => (
+                {sortType === "alphabet" ? (
+                [...filteredRecipes]
+                    .sort((a, b) => {
+                    const titleA = a.recipe.find(item => item.key === "כותרת")?.value || "";
+                    const titleB = b.recipe.find(item => item.key === "כותרת")?.value || "";
+                    return sortDirection === "asc"
+                        ? titleA.localeCompare(titleB)
+                        : titleB.localeCompare(titleA);
+                    })
+                    .map((recipe, index) => (
+                    <RecipeCard
+                        key={recipe.id}
+                        recipe={recipe}
+                        user={user}
+                        index={index}
+                        onUpdate={(recipe) => handleRecipeUpdate(recipe)}
+                        onDelete={(id) => handleDeleteRecipe(id)}
+                    />
+                    ))
+                ) : (
+                categories.map((cat) => {
+                    const catRecipes = filteredRecipes.filter((r) =>
+                    r.recipe.some(
+                        (item) => item.key === "קטגוריה" &&
+                        item.value.split(",").map(v => v.trim()).includes(cat)
+                    )
+                    );
+                    if (catRecipes.length === 0) return null;
+                    return (
+                    <Box key={cat} sx={{ mt: 4 }}>
+                        <Typography variant="h6" sx={{ fontWeight: "bold", borderBottom: "1px solid #ccc", mb: 1 }}>
+                        {cat}
+                        </Typography>
+                        {catRecipes.map((recipe, index) => (
                         <RecipeCard
                             key={recipe.id}
                             recipe={recipe}
                             user={user}
                             index={index}
-                            // onUpdate={handleRecipeUpdate}
                             onUpdate={(recipe) => handleRecipeUpdate(recipe)}
                             onDelete={(id) => handleDeleteRecipe(id)}
                         />
-                    ))}
+                        ))}
+                    </Box>
+                    );
+                })
+                )}
+
                 </InfiniteScroll>
             )}
         </Box>
