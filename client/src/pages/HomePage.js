@@ -147,6 +147,37 @@ const HomePage = () => {
         setRecipes((prev) => [{id:"Recipe_"+user.email+"_"+recipe["כותרת"],recipe:recipe}, ...prev]);
     };
 
+    const handleRecipeUpdate = (updatedRecipe) => {
+        console.log(updatedRecipe)
+        console.log(recipes)
+        setRecipes(prev =>
+            prev.map(r => r.id === updatedRecipe.id ? updatedRecipe : r)
+        );
+        filterRecipes(searchValue, selectedCategories); // Optional: re-filter
+    };
+
+    const handleDeleteRecipe = async (id) => {
+        const confirmDelete = window.confirm("האם אתה בטוח שברצונך למחוק את המתכון?");
+        if (!confirmDelete) return;
+    
+        try {
+            const SERVER = process.env.REACT_APP_SERVER_ADDRESS;
+            const response = await axios.delete(`${SERVER}/api/recipes/${id}`);
+    
+            if (response.status === 200) {
+                alert("המתכון נמחק בהצלחה.");
+                setRecipes(prev => prev.filter(r => r.id !== id));
+                setFilteredRecipes(prev => prev.filter(r => r.id !== id));
+            } else {
+                alert("שגיאה במחיקת המתכון.");
+            }
+        } catch (err) {
+            console.error("Delete error:", err);
+            alert("אירעה שגיאה בעת מחיקת המתכון.");
+        }
+    };
+    
+
     if (!user) {
         return (
             <Box sx={{ padding: "16px", textAlign: "center" }}>
@@ -266,9 +297,11 @@ const HomePage = () => {
                         <RecipeCard
                             key={recipe.id}
                             recipe={recipe}
+                            user={user}
                             index={index}
-                            onEdit={(id) => console.log("Edit recipe:", id)}
-                            onDelete={(id) => console.log("Delete recipe:", id)}
+                            // onUpdate={handleRecipeUpdate}
+                            onUpdate={(recipe) => handleRecipeUpdate(recipe)}
+                            onDelete={(id) => handleDeleteRecipe(id)}
                         />
                     ))}
                 </InfiniteScroll>

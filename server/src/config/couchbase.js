@@ -28,8 +28,8 @@ class CouchbaseService {
             if (!titleEntry) {
                 throw new Error("No title found in recipe JSON");
             }
-            const recipeName = titleEntry.value.replace(/\s+/g, "_"); // Replace spaces with underscores
 
+            const recipeName = titleEntry.value.replace(/\s+/g, "_");
             const docId = `Recipe_${userName}_${recipeName}`;
             await this.collection.upsert(docId, { recipe: recipeJson });
 
@@ -53,6 +53,16 @@ class CouchbaseService {
         } catch (error) {
             console.error("Error fetching recipes for user:", error);
             return [];
+        }
+    }
+
+    async deleteRecipe(docId) {
+        try {
+            await this.collection.remove(docId);
+            return true;
+        } catch (error) {
+            console.error("Error deleting recipe:", error);
+            return false;
         }
     }
 
@@ -127,6 +137,17 @@ class CouchbaseService {
         } catch (error) {
             console.error("Error modifying family member:", error);
             return null;
+        }
+    }
+
+    async fetchAllDocuments() {
+        try {
+            const query = `SELECT META().id, * FROM \`Recipes\``;
+            const result = await this.cluster.query(query);
+            return result.rows;
+        } catch (error) {
+            console.error("Error fetching documents from Couchbase:", error);
+            throw error;
         }
     }
 }

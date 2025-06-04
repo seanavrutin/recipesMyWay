@@ -50,9 +50,10 @@ router.get("/recipes/:userName", async (req, res) => {
  * Save a recipe
  */
 router.post("/recipes", async (req, res) => {
-    const { userName, text } = req.body;
+    let { userName, text } = req.body;
     const recipeUtils = new RecipeUtils();
     const chatGPTService = new ChatGPTService();
+    let url;
 
     if (!userName || !text) {
         return res.status(400).json({ error: "Missing required fields" });
@@ -62,14 +63,33 @@ router.post("/recipes", async (req, res) => {
         if(text.includes('http')){
             const { data } = await axios.get(text);
             const $ = cheerio.load(data);
+            url = text;
             text = $("body").text();
         }
 
         const formattedRecipe = await chatGPTService.formatRecipe(text);
+        if(url){
+            formattedRecipe.push({"key":"קישור","value":url});
+        }
 
         const docId = await CouchbaseService.saveRecipe(userName, formattedRecipe);
         if (docId) {
             res.json(formattedRecipe);
+        } else {
+            res.status(500).json({ error: "Failed to save recipe" });
+        }
+    } catch (error) {
+        res.status(500).json({ error: "Failed to save recipe" });
+    }
+});
+
+router.post("/updateRecipe", async (req, res) => {
+    let { userName,recipe } = req.body;
+
+    try {
+        const docId = await CouchbaseService.saveRecipe(userName, recipe);
+        if (docId) {
+            res.json(recipe);
         } else {
             res.status(500).json({ error: "Failed to save recipe" });
         }
@@ -167,5 +187,24 @@ router.get("/user/:userName", async (req, res) => {
         res.status(500).json({ error: "Failed to fetch user information" });
     }
 });
+
+/**
+ * Delete a recipe by document ID
+ */
+router.delete("/recipes/:docId", async (req, res) => {
+    const { docId } = req.params;
+
+    try {
+        const success = await CouchbaseService.deleteRecipe(docId);
+        if (success) {
+            res.json({ message: `Recipe deleted successfully: ${docId}` });
+        } else {
+            res.status(500).json({ error: "Failed to delete recipe" });
+        }
+    } catch (error) {
+        res.status(500).json({ error: "Failed to delete recipe" });
+    }
+});
+
 
 module.exports = router;
