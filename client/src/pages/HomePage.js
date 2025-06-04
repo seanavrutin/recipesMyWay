@@ -232,26 +232,32 @@ const HomePage = () => {
                         selectedCategories={selectedCategories}
                         onCategoryChange={handleCategoryChange}
                     />
-                    <Box sx={{ display: "flex"}}>
-                        <Button
-                            variant={sortType === "alphabet" ? "outlined" : "text"}
-                            onClick={() => {
-                            setSortType("alphabet");
-                            setSortDirection(prev => prev === "asc" ? "desc" : "asc");
-                            }}
-                            sx={{ minWidth: "fit-content", padding: "4px 8px" }}
-                        >
-                            א,ב {sortType === "alphabet" && (sortDirection === "asc" ? "↓" : "↑")}
-                        </Button>
+                    {filteredRecipes.length > 0 && (
+                        <>
+                            <Box sx={{ display: "flex"}}>
+                                <Button
+                                    variant={sortType === "alphabet" ? "outlined" : "text"}
+                                    onClick={() => {
+                                    setSortType("alphabet");
+                                    setSortDirection(prev => prev === "asc" ? "desc" : "asc");
+                                    }}
+                                    sx={{ minWidth: "fit-content", padding: "4px 8px" }}
+                                >
+                                    א,ב {sortType === "alphabet" && (sortDirection === "asc" ? "↓" : "↑")}
+                                </Button>
 
-                        <Button
-                            variant={sortType === "category" ? "outlined" : "text"}
-                            onClick={() => setSortType("category")}
-                            sx={{ minWidth: "fit-content", padding: "4px 8px" }}
-                        >
-                            לפי קטגוריה
-                        </Button>
-                        </Box>
+                                <Button
+                                    variant={sortType === "category" ? "outlined" : "text"}
+                                    onClick={() => setSortType("category")}
+                                    sx={{ minWidth: "fit-content", padding: "4px 8px" }}
+                                >
+                                    לפי קטגוריה
+                                </Button>
+                            </Box>
+                        </>
+                    )
+
+                    }
                 </>
             )}
 
