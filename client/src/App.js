@@ -14,6 +14,9 @@ import StylisPluginRTL from "stylis-plugin-rtl";
 
 const theme = createTheme({
     direction: "rtl", // Set direction to Right-To-Left
+    typography: {
+        fontFamily: "Calibri, sans-serif",
+      },
 });
 
 const rtlCache = createCache({
