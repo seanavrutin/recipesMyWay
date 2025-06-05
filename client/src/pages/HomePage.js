@@ -311,7 +311,7 @@ const HomePage = () => {
                         <Typography variant="h6" sx={{ marginBottom: "8px", fontWeight: "bold" }}>
                             נתחיל לבשל?
                         </Typography>
-                        <Typography variant="body1">בחר קטגוריה או חפש מתכון כדי להתחיל</Typography>
+                        <Typography variant="body1">בחרו קטגוריה או חפשו מתכון כדי להתחיל</Typography>
                     </Box>
                 )}
 
