@@ -64,11 +64,8 @@ const AddRecipe = ({ user,onRecipeAdded }) => {
             console.log(error);
             setLoading(false);
             setSuccess(false);
-        }
-        finally{
             setFinishedLoading(true);
         }
-
     };
 
     return (
