@@ -123,7 +123,6 @@ const RecipeCard = ({ recipe, user, index,onUpdate, onDelete }) => {
     }
 
     const formatRecipeForSharing = (recipe) => {
-        console.log(recipe)
         const title = recipe.find(item => item.key === "כותרת")?.value || "";
         const ingredients = recipe.find(item => item.key === "מרכיבים")?.value || [];
         const instructions = recipe.find(item => item.key === "הוראות הכנה")?.value || [];
@@ -417,7 +416,7 @@ const RecipeCard = ({ recipe, user, index,onUpdate, onDelete }) => {
                                         padding: "8px 12px",
                                         display: "flex",
                                         alignItems: "center",
-                                        gap: "10px",
+                                        gap: "10px"
                                     }}
                                     onClick={(e) => {
                                         e.target.style.textDecoration = e.target.style.textDecoration === "line-through" ? "none" : "line-through";
@@ -436,6 +435,7 @@ const RecipeCard = ({ recipe, user, index,onUpdate, onDelete }) => {
                                             fontWeight: "bold",
                                             color: "#888",
                                             marginRight: "10px", // Add margin between number and text
+                                            flexShrink: 0
                                         }}
                                     >
                                         {i + 1}

@@ -12,8 +12,10 @@ import {
 import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
 import SendIcon from "@mui/icons-material/Send";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import { Snackbar } from "@mui/material";
 import axios from "axios";
+import MuiAlert from "@mui/material/Alert";
+
 
 
 const AddRecipe = ({ user,onRecipeAdded }) => {
@@ -22,6 +24,8 @@ const AddRecipe = ({ user,onRecipeAdded }) => {
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
     const [finishedLoading, setFinishedLoading] = useState(false);
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
+
 
     const handleToggle = () => {
         setOpen(!open);
@@ -37,6 +41,7 @@ const AddRecipe = ({ user,onRecipeAdded }) => {
         setRecipeText("");
         setLoading(false);
         setSuccess(false);
+        setFinishedLoading(false);
     };
 
     const handleCreate = async () => {
@@ -49,12 +54,14 @@ const AddRecipe = ({ user,onRecipeAdded }) => {
                 userName: user.email,
                 text: recipeText
             });
-            console.log(response);
             onRecipeAdded(response.data);
             setLoading(false);
             setSuccess(true);
+            setSnackbarOpen(true);
+            handleClose();
         }
         catch(error){
+            console.log(error);
             setLoading(false);
             setSuccess(false);
         }
@@ -66,6 +73,11 @@ const AddRecipe = ({ user,onRecipeAdded }) => {
 
     return (
         <Box>
+            <Snackbar open={snackbarOpen} autoHideDuration={3000} onClose={() => setSnackbarOpen(false)}>
+                <MuiAlert onClose={() => setSnackbarOpen(false)} severity="success" sx={{ width: '100%' }}>
+                    המתכון נוצר בהצלחה
+                </MuiAlert>
+            </Snackbar>
             {/* "+" Button to open menu */}
             <IconButton onClick={handleToggle}>
                 <AddIcon fontSize="large" />
@@ -156,15 +168,6 @@ const AddRecipe = ({ user,onRecipeAdded }) => {
                         </Box>
                     )}
 
-                    {/* Success Message */}
-                    {success && (
-                        <Box sx={{ marginTop: 2, display: "flex", flexDirection: "column", alignItems: "center" }}>
-                            {/* <CheckCircleIcon sx={{ color: "green", fontSize: "2rem" }} /> */}
-                            <Typography variant="body2" sx={{ fontWeight: "bold", marginTop: 1, color: "#2d8a2d" }}>
-                                ✅ נוצר בהצלחה! ניתן לראות אותו ברשימת המתכונים שלך.
-                            </Typography>
-                        </Box>
-                    )}
                     {!success && finishedLoading && (
                         <Box sx={{ marginTop: 2, display: "flex", flexDirection: "column", alignItems: "center" }}>
                             <Typography variant="body2" sx={{ fontWeight: "bold", marginTop: 1, color: "red" }}>

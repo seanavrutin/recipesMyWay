@@ -145,14 +145,18 @@ const HomePage = () => {
     };
 
     const handleNewRecipe = (recipe) => {
-        console.log(recipes);
-        console.log(recipe);
-        setRecipes((prev) => [{id:"Recipe_"+user.email+"_"+recipe["כותרת"],recipe:recipe}, ...prev]);
+        const title = recipe.find(item => item.key === "כותרת")?.value || "";
+        const recipeName = title.replace(/\s+/g, "_");
+        const docId = `Recipe_${user.email}_${recipeName}`;
+
+        let newRecipe = {id:docId,recipe:recipe};
+        const newRecipes = [newRecipe, ...recipes];
+
+        setRecipes(newRecipes);
+        setFilteredRecipes(newRecipes);
     };
 
     const handleRecipeUpdate = (updatedRecipe) => {
-        console.log(updatedRecipe)
-        console.log(recipes)
         setRecipes(prev =>
             prev.map(r => r.id === updatedRecipe.id ? updatedRecipe : r)
         );

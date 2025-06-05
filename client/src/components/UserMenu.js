@@ -158,8 +158,6 @@ const UserMenu = ({ user,setUser }) => {
     };
 
     useEffect(() => {
-        console.log(user);
-        console.log(user.familyMembers)
         setPendingRequests(user.familyMembers?.filter(member => member.allowedToSeeMyRecipes === "pending") || []);
     }, [user]);
 
