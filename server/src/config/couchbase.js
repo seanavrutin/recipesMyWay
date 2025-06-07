@@ -22,18 +22,23 @@ class CouchbaseService {
         }
     }
 
-    async saveRecipe(userName, recipeJson) {
+    async saveRecipe(userName, recipeJson, docId) {
         try {
-            const titleEntry = recipeJson.find(item => item.key === "כותרת");
-            if (!titleEntry) {
+            if (!recipeJson.title) {
                 throw new Error("No title found in recipe JSON");
             }
+            if(!docId){
+                const uuid = crypto.randomUUID();
+                docId = `Recipe_${userName}_${uuid}`;
+            }
+            const document = {
+                recipe: recipeJson,
+                userName: userName,
+                id: docId
+            }
+            await this.collection.upsert(docId, document);
 
-            const recipeName = titleEntry.value.replace(/\s+/g, "_");
-            const docId = `Recipe_${userName}_${recipeName}`;
-            await this.collection.upsert(docId, { recipe: recipeJson });
-
-            return docId;
+            return document;
         } catch (error) {
             console.error("Error saving recipe:", error);
             return null;

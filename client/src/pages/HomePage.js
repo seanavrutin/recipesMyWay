@@ -64,19 +64,10 @@ const HomePage = () => {
 
             const SERVER = process.env.REACT_APP_SERVER_ADDRESS;
             const response = await axios.get(SERVER+`/api/recipes/${email}`);
-            const fetchedRecipes = response.data;
+            const fetchedRecipeDocs = response.data;
 
-            const extractedCategories = Array.from(
-                new Set(
-                    fetchedRecipes.flatMap((recipe) =>
-                        recipe.recipe
-                            .filter((item) => item.key === "קטגוריה")
-                            .flatMap((item) => item.value.split(",").map((cat) => cat.trim()))
-                    )
-                )
-            );
-
-            setRecipes(fetchedRecipes);
+            const extractedCategories = [...new Set(fetchedRecipeDocs.flatMap(item => item.recipe.categories))];
+            setRecipes(fetchedRecipeDocs);
             setCategories(extractedCategories);
             filterRecipes(searchValue, []); // Apply initial filtering
         } catch (error) {
@@ -120,23 +111,15 @@ const HomePage = () => {
             return;
         }
 
-        const filtered = recipes.filter((recipe) => {
-            const matchesSearch =
-                recipe.recipe.some(
-                    (item) =>
-                        (item.key === "כותרת" || item.key === "מרכיבים" || item.key === "הוראות הכנה") &&
-                        item.value.toString().includes(searchValue)
-                );
+        const filtered = recipes.filter((recipeDoc) => {
+            const matchesSearch = 
+                recipeDoc.recipe.title.includes(searchValue) || 
+                recipeDoc.recipe.ingredients.includes(searchValue) || 
+                recipeDoc.recipe.instructions.includes(searchValue); 
 
             const matchesCategories =
                 selectedCategories.length === 0 ||
-                selectedCategories.some((cat) =>
-                    recipe.recipe.some(
-                        (item) =>
-                            item.key === "קטגוריה" &&
-                            item.value.split(",").map((c) => c.trim()).includes(cat)
-                    )
-                );
+                selectedCategories.some((cat) =>recipeDoc.recipe.categories.includes(cat));
 
             return matchesSearch && matchesCategories;
         });
@@ -144,23 +127,34 @@ const HomePage = () => {
         setFilteredRecipes(filtered);
     };
 
-    const handleNewRecipe = (recipe) => {
-        const title = recipe.find(item => item.key === "כותרת")?.value || "";
-        const recipeName = title.replace(/\s+/g, "_");
-        const docId = `Recipe_${user.email}_${recipeName}`;
-
-        let newRecipe = {id:docId,recipe:recipe};
-        const newRecipes = [newRecipe, ...recipes];
+    const handleNewRecipe = (recipeDoc) => {
+        const newRecipes = [recipeDoc, ...recipes];
+        const newFilteredRecipes = [recipeDoc, ...filteredRecipes];
+        const newCategories = [...new Set(newRecipes.flatMap(item => item.recipe.categories))];
 
         setRecipes(newRecipes);
-        setFilteredRecipes(newRecipes);
+        setFilteredRecipes(newFilteredRecipes);
+        setCategories(newCategories);
+        setSelectedCategories(newCategories);
     };
 
     const handleRecipeUpdate = (updatedRecipe) => {
+        const newRecipes = recipes.map(r => r.id === updatedRecipe.id ? updatedRecipe : r);
+        const newFilteredRecipes = filteredRecipes.map(r => r.id === updatedRecipe.id ? updatedRecipe : r);
+        const newCategories = [...new Set(newRecipes.flatMap(item => item.recipe.categories))];
+
+        setRecipes(newRecipes);
+        setFilteredRecipes(newFilteredRecipes);
+        setCategories(newCategories);
+        setSelectedCategories(newCategories);
+
+
         setRecipes(prev =>
             prev.map(r => r.id === updatedRecipe.id ? updatedRecipe : r)
         );
-        filterRecipes(searchValue, selectedCategories); // Optional: re-filter
+        setFilteredRecipes(prev =>
+            prev.map(r => r.id === updatedRecipe.id ? updatedRecipe : r)
+        );
     };
 
     const handleDeleteRecipe = async (id) => {
@@ -173,8 +167,14 @@ const HomePage = () => {
     
             if (response.status === 200) {
                 alert("המתכון נמחק בהצלחה.");
-                setRecipes(prev => prev.filter(r => r.id !== id));
-                setFilteredRecipes(prev => prev.filter(r => r.id !== id));
+                let newRecipes = recipes.filter(r => r.id !== id);
+                let newFilteredRecipes = filteredRecipes.filter(r => r.id !== id);
+                const newCategories = [...new Set(newRecipes.flatMap(item => item.recipe.categories))];
+                setCategories(newCategories);
+                setSelectedCategories(newCategories);
+                setRecipes(newRecipes);
+                setFilteredRecipes(newFilteredRecipes);
+
             } else {
                 alert("שגיאה במחיקת המתכון.");
             }
@@ -322,15 +322,15 @@ const HomePage = () => {
             {!loading && !error && filteredRecipes.length > 0 && (
                 <InfiniteScroll
                     dataLength={filteredRecipes.length}
-                    next={() => {}} // Add pagination if needed
+                    next={() => {}}
                     hasMore={false}
                     loader={<Typography align="center">טוען...</Typography>}
                 >
                 {sortType === "alphabet" ? (
                 [...filteredRecipes]
                     .sort((a, b) => {
-                    const titleA = a.recipe.find(item => item.key === "כותרת")?.value || "";
-                    const titleB = b.recipe.find(item => item.key === "כותרת")?.value || "";
+                    const titleA = a.recipe.title;;
+                    const titleB = b.recipe.title;;
                     return sortDirection === "asc"
                         ? titleA.localeCompare(titleB)
                         : titleB.localeCompare(titleA);
@@ -338,7 +338,7 @@ const HomePage = () => {
                     .map((recipe, index) => (
                     <RecipeCard
                         key={recipe.id}
-                        recipe={recipe}
+                        recipeDoc={recipe}
                         user={user}
                         index={index}
                         onUpdate={(recipe) => handleRecipeUpdate(recipe)}
@@ -347,12 +347,8 @@ const HomePage = () => {
                     ))
                 ) : (
                 categories.map((cat) => {
-                    const catRecipes = filteredRecipes.filter((r) =>
-                    r.recipe.some(
-                        (item) => item.key === "קטגוריה" &&
-                        item.value.split(",").map(v => v.trim()).includes(cat)
-                    )
-                    );
+                    const catRecipes = filteredRecipes.filter((r) => r.recipe.categories.includes(cat));
+
                     if (catRecipes.length === 0) return null;
                     return (
                     <Box key={cat} sx={{ mt: 4 }}>
@@ -362,9 +358,8 @@ const HomePage = () => {
                         {catRecipes.map((recipe, index) => (
                         <RecipeCard
                             key={recipe.id}
-                            recipe={recipe}
+                            recipeDoc={recipe}
                             user={user}
-                            index={index}
                             onUpdate={(recipe) => handleRecipeUpdate(recipe)}
                             onDelete={(id) => handleDeleteRecipe(id)}
                         />

@@ -7,6 +7,7 @@ const cheerio = require('cheerio');
 const axios = require('axios');
 
 
+
 // Ensure Couchbase is connected
 (async () => {
     await CouchbaseService.connect();
@@ -35,12 +36,12 @@ router.get("/recipes/:userName", async (req, res) => {
             });
         }
         // Fetch all recipes for the user and their allowed family members
-        let allRecipes = [];
+        let allRecipesDocs = [];
         for (const name of userNames) {
-            const recipes = await CouchbaseService.getRecipesByUser(name);
-            allRecipes = allRecipes.concat(recipes);
+            const recipeDocs = await CouchbaseService.getRecipesByUser(name);
+            allRecipesDocs = allRecipesDocs.concat(recipeDocs);
         }
-        res.json(allRecipes);
+        res.json(allRecipesDocs);
     } catch (error) {
         res.status(500).json({ error: "Failed to fetch recipes" });
     }
@@ -62,19 +63,55 @@ router.post("/recipes", async (req, res) => {
     try {
         if(text.includes('http')){
             const { data } = await axios.get(text);
-            const $ = cheerio.load(data);
-            url = text;
-            text = $("body").text();
-        }
 
+            if (data.includes('_Incapsula_Resource') || data.includes('Incapsula') || data.includes('Request unsuccessful')) {
+                res.status(400).json({ error: "האתר חסום בפני תוכנות אוטומטיות, ולא ניתן לטעון את המתכון ממנו. נסו אתר אחר או העתיקו את המתכון ידנית." });
+                return;
+            }
+
+            const $ = cheerio.load(data);
+          
+            // Remove likely comment sections
+            $([
+              '[id*="comment"]',
+              '[class*="comment"]',
+              '[id*="respond"]',
+              '[class*="respond"]',
+              '[id*="reply"]',
+              '[class*="reply"]',
+              '[id*="discussion"]',
+              '[class*="discussion"]',
+              '[id*="reviews"]',
+              '[class*="reviews"]',
+              '[id*="feedback"]',
+              '[class*="feedback"]',
+              'section.comments',
+              'div.comments',
+              'ul.comments',
+              'ol.comments',
+              'aside.comments'
+            ].join(',')).remove();
+          
+            // Optionally also remove footer, sidebar, etc.
+            $('footer, nav, aside, script, style').remove();
+          
+            // Extract clean text from body
+            text = $("body").text();       
+        }
+    }
+    catch(error){
+        res.status(400).json({ error: "האתר חסום בפני תוכנות אוטומטיות, ולא ניתן לטעון את המתכון ממנו. נסו אתר אחר או העתיקו את המתכון ידנית." });
+        return;
+    }
+    try{
         const formattedRecipe = await chatGPTService.formatRecipe(text);
         if(url){
-            formattedRecipe.push({"key":"קישור","value":url});
+            formattedRecipe.url=url;
         }
 
-        const docId = await CouchbaseService.saveRecipe(userName, formattedRecipe);
-        if (docId) {
-            res.json(formattedRecipe);
+        const document = await CouchbaseService.saveRecipe(userName, formattedRecipe,undefined);
+        if (document) {
+            res.json(document);
         } else {
             res.status(500).json({ error: "Failed to save recipe" });
         }
@@ -84,12 +121,12 @@ router.post("/recipes", async (req, res) => {
 });
 
 router.post("/updateRecipe", async (req, res) => {
-    let { userName,recipe } = req.body;
+    let { userName,recipe,docId } = req.body;
 
     try {
-        const docId = await CouchbaseService.saveRecipe(userName, recipe);
-        if (docId) {
-            res.json(recipe);
+        const document = await CouchbaseService.saveRecipe(userName, recipe, docId);
+        if (document) {
+            res.json(document);
         } else {
             res.status(500).json({ error: "Failed to save recipe" });
         }
