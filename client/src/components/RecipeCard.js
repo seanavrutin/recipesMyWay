@@ -62,7 +62,7 @@ const RecipeCard = ({ recipeDoc, user,onUpdate, onDelete }) => {
     
         let stage = "title";
         let title = "";
-        let category = "";
+        let category = [];
         let ingredients = [];
         let instructions = [];
         let url = "";
@@ -78,7 +78,7 @@ const RecipeCard = ({ recipeDoc, user,onUpdate, onDelete }) => {
             } else if (line === "קטגוריה:") {
                 continue;
             } else if (stage === "category" && line !== "מרכיבים:") {
-                category = line;
+                category = line.split(',');
             } else if (line === "מרכיבים:") {
                 stage = "ingredients";
             } else if (line === "הוראות הכנה:") {

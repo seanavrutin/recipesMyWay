@@ -63,7 +63,7 @@ router.post("/recipes", async (req, res) => {
     try {
         if(text.includes('http')){
             const { data } = await axios.get(text);
-
+            url = text;
             if (data.includes('_Incapsula_Resource') || data.includes('Incapsula') || data.includes('Request unsuccessful')) {
                 res.status(400).json({ error: "האתר חסום בפני תוכנות אוטומטיות, ולא ניתן לטעון את המתכון ממנו. נסו אתר אחר או העתיקו את המתכון ידנית." });
                 return;

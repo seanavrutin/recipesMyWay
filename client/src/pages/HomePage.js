@@ -11,6 +11,9 @@ import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import Login from "../components/Login";
 import UserMenu from "../components/UserMenu";
 import AddRecipe from "../components/AddRecipe";
+import { Snackbar } from "@mui/material";
+import { Dialog } from "@mui/material";
+
 
 
 const HomePage = () => {
@@ -24,6 +27,13 @@ const HomePage = () => {
     const [user, setUser] = useState(null); // Decoded user from localStorage
     const [sortType, setSortType] = useState("alphabet"); // "alphabet" or "category"
     const [sortDirection, setSortDirection] = useState("asc"); // "asc" or "desc"
+
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
+    const [snackbarMessage, setSnackbarMessage] = useState('');
+    const [snackbarSeverity, setSnackbarSeverity] = useState('success');
+    const [deleteTargetId, setDeleteTargetId] = useState(null);
+
 
 
     const navigate = useNavigate();
@@ -113,9 +123,9 @@ const HomePage = () => {
 
         const filtered = recipes.filter((recipeDoc) => {
             const matchesSearch = 
-                recipeDoc.recipe.title.includes(searchValue) || 
-                recipeDoc.recipe.ingredients.includes(searchValue) || 
-                recipeDoc.recipe.instructions.includes(searchValue); 
+                recipeDoc.recipe.title.includes(searchValue)|| 
+                recipeDoc.recipe.ingredients.some(ing => ing.includes(searchValue)) || 
+                recipeDoc.recipe.instructions.some(inst => inst.includes(searchValue)); 
 
             const matchesCategories =
                 selectedCategories.length === 0 ||
@@ -157,36 +167,47 @@ const HomePage = () => {
         );
     };
 
-    const handleDeleteRecipe = async (id) => {
-        const confirmDelete = window.confirm("האם אתה בטוח שברצונך למחוק את המתכון?");
-        if (!confirmDelete) return;
-    
-        try {
-            const SERVER = process.env.REACT_APP_SERVER_ADDRESS;
-            const response = await axios.delete(`${SERVER}/api/recipes/${id}`);
-    
-            if (response.status === 200) {
-                alert("המתכון נמחק בהצלחה.");
-                let newRecipes = recipes.filter(r => r.id !== id);
-                let newFilteredRecipes = filteredRecipes.filter(r => r.id !== id);
-                const newCategories = [...new Set(newRecipes.flatMap(item => item.recipe.categories))];
-                setCategories(newCategories);
-                setSelectedCategories(newCategories);
-                setRecipes(newRecipes);
-                setFilteredRecipes(newFilteredRecipes);
+    const handleDeleteClick = (id) => {
+        setDeleteTargetId(id);
+        setDialogOpen(true);
+      };
 
-            } else {
-                alert("שגיאה במחיקת המתכון.");
-            }
+      const handleConfirmDelete = async () => {
+        setDialogOpen(false);
+      
+        try {
+          const SERVER = process.env.REACT_APP_SERVER_ADDRESS;
+          const response = await axios.delete(`${SERVER}/api/recipes/${deleteTargetId}`);
+      
+          if (response.status === 200) {
+            const newRecipes = recipes.filter(r => r.id !== deleteTargetId);
+            const newFiltered = filteredRecipes.filter(r => r.id !== deleteTargetId);
+            const newCategories = [...new Set(newRecipes.flatMap(item => item.recipe.categories))];
+      
+            setRecipes(newRecipes);
+            setFilteredRecipes(newFiltered);
+            setCategories(newCategories);
+            setSelectedCategories(newCategories);
+            setSnackbarMessage("המתכון נמחק בהצלחה.");
+            setSnackbarSeverity('success');
+          } else {
+            setSnackbarMessage("שגיאה במחיקת המתכון.");
+            setSnackbarSeverity('error');
+          }
         } catch (err) {
-            console.error("Delete error:", err);
-            alert("אירעה שגיאה בעת מחיקת המתכון.");
+          console.error("Delete error:", err);
+          setSnackbarMessage("אירעה שגיאה בעת מחיקת המתכון.");
+          setSnackbarSeverity('error');
+        } finally {
+          setSnackbarOpen(true);
         }
-    };
+      };
+      
     
 
     if (!user) {
         return (
+            
             <Box sx={{ padding: "16px", textAlign: "center" }}>
                 <Typography
                     variant="h4"
@@ -209,6 +230,30 @@ const HomePage = () => {
 
     return (
         <Box sx={{ padding: "8px" }}>
+            <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)}>
+                <Box p={2}>
+                    <Typography variant="h6" gutterBottom>?האם אתה בטוח שברצונך למחוק את המתכון</Typography>
+                    <Box display="flex" gap={2} mt={2}>
+                        <Button onClick={handleConfirmDelete} color="error" variant="contained">מחק</Button>
+                        <Button onClick={() => setDialogOpen(false)} color="primary">בטל</Button>
+                    </Box>
+                </Box>
+            </Dialog>
+
+            <Snackbar
+            open={snackbarOpen}
+            autoHideDuration={3000}
+            onClose={() => setSnackbarOpen(false)}
+            message={snackbarMessage}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            ContentProps={{
+                sx: {
+                backgroundColor: snackbarSeverity === 'success' ? 'green' : 'red',
+                color: 'white'
+                }
+            }}
+            />
+
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>    
                 <UserMenu user={user} setUser={setUser} />
                 <Typography
@@ -342,7 +387,7 @@ const HomePage = () => {
                         user={user}
                         index={index}
                         onUpdate={(recipe) => handleRecipeUpdate(recipe)}
-                        onDelete={(id) => handleDeleteRecipe(id)}
+                        onDelete={(id) => handleDeleteClick(id)}
                     />
                     ))
                 ) : (
@@ -361,7 +406,7 @@ const HomePage = () => {
                             recipeDoc={recipe}
                             user={user}
                             onUpdate={(recipe) => handleRecipeUpdate(recipe)}
-                            onDelete={(id) => handleDeleteRecipe(id)}
+                            onDelete={(id) => handleDeleteClick(id)}
                         />
                         ))}
                     </Box>
