@@ -11,15 +11,11 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { Dialog, DialogTitle, DialogContent, Tooltip } from '@mui/material';
 import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 
-
-
-
-
-
-const RecipeCard = ({ recipe, user, index,onUpdate, onDelete }) => {
+const RecipeCard = ({ recipeDoc, user,onUpdate, onDelete }) => {
     const [expandedRecipe, setExpandedRecipe] = useState(false); // State for the entire recipe
     const [expandedIngredients, setExpandedIngredients] = useState(true); // State for ingredients section
     const [expandedInstructions, setExpandedInstructions] = useState(true); // State for instructions section
+    const [expandedNotes, setExpandedNotes] = useState(true); // State for instructions section
     const { fontSize } = useFontSize(); // Get global font size
     const [editMode, setEditMode] = useState(false);
     const [editedText, setEditedText] = useState("");
@@ -38,40 +34,39 @@ const RecipeCard = ({ recipe, user, index,onUpdate, onDelete }) => {
     const handleToggleInstructions = () => {
         setExpandedInstructions(!expandedInstructions);
     };
+    const handleToggleNotes = () => {
+        setExpandedNotes(!expandedNotes);
+    };
 
     const handleEditClick = () => {
-        setEditedText(convertRecipeToText(recipe.recipe));
+        setEditedText(convertRecipeToText(recipeDoc.recipe));
         setEditMode(true);
         setExpandedRecipe(true);
     };
 
-    const convertRecipeToText = (recipe) => {
-        const title = recipe.find(item => item.key === "כותרת")?.value || "";
-        const category = recipe.find(item => item.key === "קטגוריה")?.value || "";
-        const ingredients = recipe.find(item => item.key === "מרכיבים")?.value || [];
-        const instructions = recipe.find(item => item.key === "הוראות הכנה")?.value || [];
-        const link = recipe.find(item => item.key === "קישור")?.value;
-    
-        let text = `${title}\nקטגוריה:\n${category}\nמרכיבים:\n`;
-        ingredients.forEach(ing => text += `* ${ing}\n`);
+    const convertRecipeToText = (recipeDoc) => {
+        let text = `${recipeDoc.title}\nקטגוריה:\n${recipeDoc.categories}\nמרכיבים:\n`;
+        recipeDoc.ingredients.forEach(ing => text += `* ${ing}\n`);
         text += `הוראות הכנה:\n`;
-        instructions.forEach((inst, i) => text += `${i + 1}. ${inst}\n`);
-        if (link) text += `קישור:\n${link}\n`;
+        recipeDoc.instructions.forEach((inst, i) => text += `${i + 1}. ${inst}\n`);
+        if (recipeDoc.url) text += `קישור:\n${recipeDoc.url}\n`;
+        if (recipeDoc.notes) text += `הערות:\n${recipeDoc.notes}\n`;
     
         return text.trim();
     };
     
 
     const convertTextToRecipe = (text) => {
-        const lines = text.split("\n");
-        const recipe = [];
+        let lines = text.split("\n");
+        let recipe = {};
     
         let stage = "title";
         let title = "";
-        let category = "";
-        const ingredients = [];
-        const instructions = [];
-        let link = "";
+        let category = [];
+        let ingredients = [];
+        let instructions = [];
+        let url = "";
+        let notes ="";
     
         for (let line of lines) {
             line = line.trim();
@@ -83,39 +78,46 @@ const RecipeCard = ({ recipe, user, index,onUpdate, onDelete }) => {
             } else if (line === "קטגוריה:") {
                 continue;
             } else if (stage === "category" && line !== "מרכיבים:") {
-                category = line;
+                category = line.split(',');
             } else if (line === "מרכיבים:") {
                 stage = "ingredients";
             } else if (line === "הוראות הכנה:") {
                 stage = "instructions";
             } else if (line === "קישור:") {
-                stage = "link";
+                stage = "url";
+            } else if (line === "הערות:") {
+                stage = "notes";
             } else if (stage === "ingredients" && line.startsWith("*")) {
                 ingredients.push(line.slice(1).trim());
             } else if (stage === "instructions" && /^\d+\./.test(line)) {
                 instructions.push(line.replace(/^\d+\.\s*/, ""));
-            } else if (stage === "link") {
-                link = line;
+            } else if (stage === "url") {
+                url = line;
+            } else if (stage === "notes") {
+                notes = line;
             }
+            
         }
-    
-        if (title) recipe.push({ key: "כותרת", value: title });
-        if (category) recipe.push({ key: "קטגוריה", value: category });
-        if (ingredients.length) recipe.push({ key: "מרכיבים", value: ingredients });
-        if (instructions.length) recipe.push({ key: "הוראות הכנה", value: instructions });
-        if (link) recipe.push({ key: "קישור", value: link });
+
+        if (title) recipe.title = title;
+        if (category) recipe.categories = category;
+        if (ingredients.length) recipe.ingredients = ingredients;
+        if (instructions.length) recipe.instructions = instructions;
+        if (url) recipe.url = url;
+        if (notes) recipe.notes = notes;
     
         return recipe;
     };
 
-    const handleUpdateRecipe = async () => {
-        const updatedRecipe = convertTextToRecipe(editedText);
+    let handleUpdateRecipe = async () => {
+        let updatedRecipe = convertTextToRecipe(editedText);
+        console.log(updatedRecipe)
         try {
             const SERVER = process.env.REACT_APP_SERVER_ADDRESS;
-            await axios.post(`${SERVER}/api/updateRecipe`, {userName:user.email, recipe: updatedRecipe });
+            let newRecipeDoc = await axios.post(`${SERVER}/api/updateRecipe`, {userName:recipeDoc.userName, recipe: updatedRecipe, docId: recipeDoc.id });
             setEditMode(false);
-            recipe.recipe = updatedRecipe;
-            onUpdate(recipe);
+            recipeDoc = newRecipeDoc.data;
+            onUpdate(newRecipeDoc.data);
             setSnackbarOpen(true);
         } catch (err) {
             alert("שגיאה בעדכון המתכון");
@@ -123,20 +125,26 @@ const RecipeCard = ({ recipe, user, index,onUpdate, onDelete }) => {
     }
 
     const formatRecipeForSharing = (recipe) => {
-        const title = recipe.find(item => item.key === "כותרת")?.value || "";
-        const ingredients = recipe.find(item => item.key === "מרכיבים")?.value || [];
-        const instructions = recipe.find(item => item.key === "הוראות הכנה")?.value || [];
       
-        let text = `*${title}*\n\n*מרכיבים:*\n`;
-        ingredients.forEach(ing => text += `• ${ing}\n`);
+        let text = `*${recipe.title}*\n\n*מרכיבים:*\n`;
+        recipe.ingredients.forEach(ing => text += `• ${ing}\n`);
         text += `\n*הוראות הכנה:*\n`;
-        instructions.forEach((step, i) => text += `${i + 1}. ${step}\n`);
+        recipe.instructions.forEach((step, i) => text += `${i + 1}. ${step}\n`);
+        if(recipe.notes && recipe.notes.length > 0){
+            text += `\n*הערות:*\n`;
+            text += recipe.notes;
+            text += `\n`;
+        }
+        if(recipe.url && recipe.url.length > 0){
+            text += `\n*קישור:*\n`;
+            text += recipe.url;
+        }
       
         return text.trim();
     };
 
     const handleShare = async () => {
-        const textToShare = formatRecipeForSharing(recipe.recipe);
+        const textToShare = formatRecipeForSharing(recipeDoc.recipe);
     
         const isMobile =
             /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
@@ -160,7 +168,7 @@ const RecipeCard = ({ recipe, user, index,onUpdate, onDelete }) => {
 
     const handleCopy = async () => {
         try {
-          await navigator.clipboard.writeText(formatRecipeForSharing(recipe.recipe));
+          await navigator.clipboard.writeText(formatRecipeForSharing(recipeDoc.recipe));
           setCopied(true)
         } catch (err) {
           console.error("Copy failed:", err);
@@ -171,10 +179,11 @@ const RecipeCard = ({ recipe, user, index,onUpdate, onDelete }) => {
     
 
     // Extracting title, ingredients, and instructions from the recipe JSON
-    const title = recipe.recipe.find((item) => item.key === "כותרת")?.value || "Unknown Recipe";
-    const ingredients = recipe.recipe.find((item) => item.key === "מרכיבים")?.value || [];
-    const instructions = recipe.recipe.find((item) => item.key === "הוראות הכנה")?.value || [];
-    const link = recipe.recipe.find(item => item.key === "קישור")?.value || undefined;
+    const title = recipeDoc.recipe.title;
+    const ingredients = recipeDoc.recipe.ingredients;
+    const instructions = recipeDoc.recipe.instructions;
+    const url = (recipeDoc.recipe.url && recipeDoc.recipe.url.length) > 0 ? recipeDoc.recipe.url : undefined;
+    const notes = (recipeDoc.recipe.notes && recipeDoc.recipe.notes.length) > 0 ? recipeDoc.recipe.notes : undefined;
 
     return (
         <Card sx={{ marginBottom: "16px", backgroundColor: "#ffffff78" }}>
@@ -194,7 +203,7 @@ const RecipeCard = ({ recipe, user, index,onUpdate, onDelete }) => {
                     {/* WhatsApp Icon */}
                     <IconButton
                         component="a"
-                        href={`https://wa.me/?text=${encodeURIComponent(formatRecipeForSharing(recipe.recipe))}`}
+                        href={`https://wa.me/?text=${encodeURIComponent(formatRecipeForSharing(recipeDoc.recipe))}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         sx={{ fontSize: "2.5rem" }}
@@ -232,10 +241,10 @@ const RecipeCard = ({ recipe, user, index,onUpdate, onDelete }) => {
                         onClick={handleToggleRecipe} // Expand/collapse recipe
                     >
                         {title}
-                        {link && (
+                        {url && (
                             <>
                                 {" ("}
-                                <a href={link} target="_blank" rel="noopener noreferrer" style={{ color: "#1976d2", textDecoration: "underline" }}>
+                                <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: "#1976d2", textDecoration: "underline" }}>
                                     קישור
                                 </a>
                                 {")"}
@@ -256,7 +265,7 @@ const RecipeCard = ({ recipe, user, index,onUpdate, onDelete }) => {
                             </IconButton>
                         </Tooltip>
                         <Tooltip title="מחק">
-                            <IconButton onClick={() => onDelete(recipe.id)}>
+                            <IconButton onClick={() => onDelete(recipeDoc.id)}>
                                 <DeleteIcon />
                             </IconButton>
                         </Tooltip>
@@ -445,6 +454,52 @@ const RecipeCard = ({ recipe, user, index,onUpdate, onDelete }) => {
                             ))}
                         </ol>
                     </Collapse>
+                    {/* Notes Section */}
+                    {notes &&
+                        <span>
+                        <Box
+                            sx={{
+                                textAlign: "center",
+                                marginY: "16px",
+                                cursor: "pointer",
+                            }}
+                            onClick={handleToggleNotes} // Expand/collapse notes
+                        >
+                            <Box
+                                sx={{
+                                    height: "1px",
+                                    backgroundColor: "#bbb",
+                                    width: "100%",
+                                    borderRadius: "2px",
+                                }}
+                            ></Box>
+                            <Typography
+                                variant="h6"
+                                sx={{
+                                    fontSize: fontSize * 1.1 + "px",
+                                    fontWeight: "bold",
+                                    marginY: "8px",
+                                    color: "#333",
+                                    userSelect: "none", // Disable text selection
+                                    backgroundColor: "transparent", // Remove highlighting effect
+                                }}
+                            >
+                                הערות
+                            </Typography>
+                            <Box
+                                sx={{
+                                    height: "1px",
+                                    backgroundColor: "#bbb",
+                                    width: "100%",
+                                    borderRadius: "2px",
+                                }}
+                            ></Box>
+                        </Box>
+                        <Collapse in={expandedNotes} timeout="auto" unmountOnExit>
+                            {notes}
+                        </Collapse>
+                        </span>
+                    }
                 </CardContent>
             </>
             )}

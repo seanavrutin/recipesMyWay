@@ -11,6 +11,9 @@ import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import Login from "../components/Login";
 import UserMenu from "../components/UserMenu";
 import AddRecipe from "../components/AddRecipe";
+import { Snackbar } from "@mui/material";
+import { Dialog } from "@mui/material";
+
 
 
 const HomePage = () => {
@@ -24,6 +27,13 @@ const HomePage = () => {
     const [user, setUser] = useState(null); // Decoded user from localStorage
     const [sortType, setSortType] = useState("alphabet"); // "alphabet" or "category"
     const [sortDirection, setSortDirection] = useState("asc"); // "asc" or "desc"
+
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
+    const [snackbarMessage, setSnackbarMessage] = useState('');
+    const [snackbarSeverity, setSnackbarSeverity] = useState('success');
+    const [deleteTargetId, setDeleteTargetId] = useState(null);
+
 
 
     const navigate = useNavigate();
@@ -64,19 +74,10 @@ const HomePage = () => {
 
             const SERVER = process.env.REACT_APP_SERVER_ADDRESS;
             const response = await axios.get(SERVER+`/api/recipes/${email}`);
-            const fetchedRecipes = response.data;
+            const fetchedRecipeDocs = response.data;
 
-            const extractedCategories = Array.from(
-                new Set(
-                    fetchedRecipes.flatMap((recipe) =>
-                        recipe.recipe
-                            .filter((item) => item.key === "קטגוריה")
-                            .flatMap((item) => item.value.split(",").map((cat) => cat.trim()))
-                    )
-                )
-            );
-
-            setRecipes(fetchedRecipes);
+            const extractedCategories = [...new Set(fetchedRecipeDocs.flatMap(item => item.recipe.categories))];
+            setRecipes(fetchedRecipeDocs);
             setCategories(extractedCategories);
             filterRecipes(searchValue, []); // Apply initial filtering
         } catch (error) {
@@ -120,23 +121,15 @@ const HomePage = () => {
             return;
         }
 
-        const filtered = recipes.filter((recipe) => {
-            const matchesSearch =
-                recipe.recipe.some(
-                    (item) =>
-                        (item.key === "כותרת" || item.key === "מרכיבים" || item.key === "הוראות הכנה") &&
-                        item.value.toString().includes(searchValue)
-                );
+        const filtered = recipes.filter((recipeDoc) => {
+            const matchesSearch = 
+                recipeDoc.recipe.title.includes(searchValue)|| 
+                recipeDoc.recipe.ingredients.some(ing => ing.includes(searchValue)) || 
+                recipeDoc.recipe.instructions.some(inst => inst.includes(searchValue)); 
 
             const matchesCategories =
                 selectedCategories.length === 0 ||
-                selectedCategories.some((cat) =>
-                    recipe.recipe.some(
-                        (item) =>
-                            item.key === "קטגוריה" &&
-                            item.value.split(",").map((c) => c.trim()).includes(cat)
-                    )
-                );
+                selectedCategories.some((cat) =>recipeDoc.recipe.categories.includes(cat));
 
             return matchesSearch && matchesCategories;
         });
@@ -144,49 +137,77 @@ const HomePage = () => {
         setFilteredRecipes(filtered);
     };
 
-    const handleNewRecipe = (recipe) => {
-        const title = recipe.find(item => item.key === "כותרת")?.value || "";
-        const recipeName = title.replace(/\s+/g, "_");
-        const docId = `Recipe_${user.email}_${recipeName}`;
-
-        let newRecipe = {id:docId,recipe:recipe};
-        const newRecipes = [newRecipe, ...recipes];
+    const handleNewRecipe = (recipeDoc) => {
+        const newRecipes = [recipeDoc, ...recipes];
+        const newFilteredRecipes = [recipeDoc, ...filteredRecipes];
+        const newCategories = [...new Set(newRecipes.flatMap(item => item.recipe.categories))];
 
         setRecipes(newRecipes);
-        setFilteredRecipes(newRecipes);
+        setFilteredRecipes(newFilteredRecipes);
+        setCategories(newCategories);
+        setSelectedCategories(newCategories);
     };
 
     const handleRecipeUpdate = (updatedRecipe) => {
+        const newRecipes = recipes.map(r => r.id === updatedRecipe.id ? updatedRecipe : r);
+        const newFilteredRecipes = filteredRecipes.map(r => r.id === updatedRecipe.id ? updatedRecipe : r);
+        const newCategories = [...new Set(newRecipes.flatMap(item => item.recipe.categories))];
+
+        setRecipes(newRecipes);
+        setFilteredRecipes(newFilteredRecipes);
+        setCategories(newCategories);
+        setSelectedCategories(newCategories);
+
+
         setRecipes(prev =>
             prev.map(r => r.id === updatedRecipe.id ? updatedRecipe : r)
         );
-        filterRecipes(searchValue, selectedCategories); // Optional: re-filter
+        setFilteredRecipes(prev =>
+            prev.map(r => r.id === updatedRecipe.id ? updatedRecipe : r)
+        );
     };
 
-    const handleDeleteRecipe = async (id) => {
-        const confirmDelete = window.confirm("האם אתה בטוח שברצונך למחוק את המתכון?");
-        if (!confirmDelete) return;
-    
+    const handleDeleteClick = (id) => {
+        setDeleteTargetId(id);
+        setDialogOpen(true);
+      };
+
+      const handleConfirmDelete = async () => {
+        setDialogOpen(false);
+      
         try {
-            const SERVER = process.env.REACT_APP_SERVER_ADDRESS;
-            const response = await axios.delete(`${SERVER}/api/recipes/${id}`);
-    
-            if (response.status === 200) {
-                alert("המתכון נמחק בהצלחה.");
-                setRecipes(prev => prev.filter(r => r.id !== id));
-                setFilteredRecipes(prev => prev.filter(r => r.id !== id));
-            } else {
-                alert("שגיאה במחיקת המתכון.");
-            }
+          const SERVER = process.env.REACT_APP_SERVER_ADDRESS;
+          const response = await axios.delete(`${SERVER}/api/recipes/${deleteTargetId}`);
+      
+          if (response.status === 200) {
+            const newRecipes = recipes.filter(r => r.id !== deleteTargetId);
+            const newFiltered = filteredRecipes.filter(r => r.id !== deleteTargetId);
+            const newCategories = [...new Set(newRecipes.flatMap(item => item.recipe.categories))];
+      
+            setRecipes(newRecipes);
+            setFilteredRecipes(newFiltered);
+            setCategories(newCategories);
+            setSelectedCategories(newCategories);
+            setSnackbarMessage("המתכון נמחק בהצלחה.");
+            setSnackbarSeverity('success');
+          } else {
+            setSnackbarMessage("שגיאה במחיקת המתכון.");
+            setSnackbarSeverity('error');
+          }
         } catch (err) {
-            console.error("Delete error:", err);
-            alert("אירעה שגיאה בעת מחיקת המתכון.");
+          console.error("Delete error:", err);
+          setSnackbarMessage("אירעה שגיאה בעת מחיקת המתכון.");
+          setSnackbarSeverity('error');
+        } finally {
+          setSnackbarOpen(true);
         }
-    };
+      };
+      
     
 
     if (!user) {
         return (
+            
             <Box sx={{ padding: "16px", textAlign: "center" }}>
                 <Typography
                     variant="h4"
@@ -209,6 +230,30 @@ const HomePage = () => {
 
     return (
         <Box sx={{ padding: "8px" }}>
+            <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)}>
+                <Box p={2}>
+                    <Typography variant="h6" gutterBottom>?האם אתה בטוח שברצונך למחוק את המתכון</Typography>
+                    <Box display="flex" gap={2} mt={2}>
+                        <Button onClick={handleConfirmDelete} color="error" variant="contained">מחק</Button>
+                        <Button onClick={() => setDialogOpen(false)} color="primary">בטל</Button>
+                    </Box>
+                </Box>
+            </Dialog>
+
+            <Snackbar
+            open={snackbarOpen}
+            autoHideDuration={3000}
+            onClose={() => setSnackbarOpen(false)}
+            message={snackbarMessage}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            ContentProps={{
+                sx: {
+                backgroundColor: snackbarSeverity === 'success' ? 'green' : 'red',
+                color: 'white'
+                }
+            }}
+            />
+
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>    
                 <UserMenu user={user} setUser={setUser} />
                 <Typography
@@ -322,15 +367,15 @@ const HomePage = () => {
             {!loading && !error && filteredRecipes.length > 0 && (
                 <InfiniteScroll
                     dataLength={filteredRecipes.length}
-                    next={() => {}} // Add pagination if needed
+                    next={() => {}}
                     hasMore={false}
                     loader={<Typography align="center">טוען...</Typography>}
                 >
                 {sortType === "alphabet" ? (
                 [...filteredRecipes]
                     .sort((a, b) => {
-                    const titleA = a.recipe.find(item => item.key === "כותרת")?.value || "";
-                    const titleB = b.recipe.find(item => item.key === "כותרת")?.value || "";
+                    const titleA = a.recipe.title;;
+                    const titleB = b.recipe.title;;
                     return sortDirection === "asc"
                         ? titleA.localeCompare(titleB)
                         : titleB.localeCompare(titleA);
@@ -338,21 +383,17 @@ const HomePage = () => {
                     .map((recipe, index) => (
                     <RecipeCard
                         key={recipe.id}
-                        recipe={recipe}
+                        recipeDoc={recipe}
                         user={user}
                         index={index}
                         onUpdate={(recipe) => handleRecipeUpdate(recipe)}
-                        onDelete={(id) => handleDeleteRecipe(id)}
+                        onDelete={(id) => handleDeleteClick(id)}
                     />
                     ))
                 ) : (
                 categories.map((cat) => {
-                    const catRecipes = filteredRecipes.filter((r) =>
-                    r.recipe.some(
-                        (item) => item.key === "קטגוריה" &&
-                        item.value.split(",").map(v => v.trim()).includes(cat)
-                    )
-                    );
+                    const catRecipes = filteredRecipes.filter((r) => r.recipe.categories.includes(cat));
+
                     if (catRecipes.length === 0) return null;
                     return (
                     <Box key={cat} sx={{ mt: 4 }}>
@@ -362,11 +403,10 @@ const HomePage = () => {
                         {catRecipes.map((recipe, index) => (
                         <RecipeCard
                             key={recipe.id}
-                            recipe={recipe}
+                            recipeDoc={recipe}
                             user={user}
-                            index={index}
                             onUpdate={(recipe) => handleRecipeUpdate(recipe)}
-                            onDelete={(id) => handleDeleteRecipe(id)}
+                            onDelete={(id) => handleDeleteClick(id)}
                         />
                         ))}
                     </Box>

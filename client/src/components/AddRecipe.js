@@ -25,6 +25,7 @@ const AddRecipe = ({ user,onRecipeAdded }) => {
     const [success, setSuccess] = useState(false);
     const [finishedLoading, setFinishedLoading] = useState(false);
     const [snackbarOpen, setSnackbarOpen] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
 
 
     const handleToggle = () => {
@@ -61,6 +62,9 @@ const AddRecipe = ({ user,onRecipeAdded }) => {
             handleClose();
         }
         catch(error){
+            if(error?.response?.data?.error){
+                setErrorMessage(error.response.data.error);
+            }
             console.log(error);
             setLoading(false);
             setSuccess(false);
@@ -168,7 +172,7 @@ const AddRecipe = ({ user,onRecipeAdded }) => {
                     {!success && finishedLoading && (
                         <Box sx={{ marginTop: 2, display: "flex", flexDirection: "column", alignItems: "center" }}>
                             <Typography variant="body2" sx={{ fontWeight: "bold", marginTop: 1, color: "red" }}>
-                                תקלה בשמירת המתכון, נסה שוב
+                            {errorMessage !== '' ? errorMessage : 'תקלה בשמירת המתכון, נסה שוב'}
                             </Typography>
                         </Box>
                     )}
