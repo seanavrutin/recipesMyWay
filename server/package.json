@@ -22,7 +22,9 @@
     "fs": "^0.0.1-security",
     "googleapis": "^144.0.0",
     "https": "^1.0.0",
+    "multer": "^2.0.1",
     "openai": "^4.81.0",
+    "sharp": "^0.34.2",
     "stream": "^0.0.3"
   },
   "devDependencies": {

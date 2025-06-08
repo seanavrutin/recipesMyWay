@@ -26,7 +26,7 @@ const AddRecipe = ({ user,onRecipeAdded }) => {
     const [finishedLoading, setFinishedLoading] = useState(false);
     const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
-
+    const [imageFile, setImageFile] = useState(null);
 
     const handleToggle = () => {
         setOpen(!open);
@@ -51,10 +51,19 @@ const AddRecipe = ({ user,onRecipeAdded }) => {
 
         const SERVER = process.env.REACT_APP_SERVER_ADDRESS;
         try{
-            let response = await axios.post(`${SERVER}/api/recipes`, {
-                userName: user.email,
-                text: recipeText
+            const formData = new FormData();
+            formData.append("userName", user.email);
+            formData.append("text", recipeText);
+            if (imageFile) {
+              formData.append("image", imageFile);
+            }
+            
+            let response = await axios.post(`${SERVER}/api/recipes`, formData, {
+              headers: {
+                "Content-Type": "multipart/form-data"
+              }
             });
+            
             onRecipeAdded(response.data);
             setLoading(false);
             setSuccess(true);
@@ -120,8 +129,10 @@ const AddRecipe = ({ user,onRecipeAdded }) => {
                         variant="body2"
                         sx={{ textAlign: "center", fontSize: "0.9rem", direction: "rtl", color: "#333", marginTop: "1rem" }}
                     >
-                        ניתן להוסיף מתכון על ידי הקלדה חופשית או הדבקת קישור לאתר המכיל אותו
+                        ניתן להוסיף מתכון או על ידי הקלדה חופשית, או על ידי הדבקת קישור לאתר המכיל אותו, או על ידי העלת תמונה שלו
                     </Typography>
+
+
 
                     {/* Recipe Input */}
                     <TextField
@@ -137,8 +148,30 @@ const AddRecipe = ({ user,onRecipeAdded }) => {
                             width: "90%",
                         }}
                     />
+                    <Button
+                        variant="outlined"
+                        component="label"
+                        sx={{ fontSize: "0.9rem", whiteSpace: "nowrap" }}
+                    >
+                        העלה תמונה (לא בכתב יד)
+                        <input
+                        type="file"
+                        accept="image/*"
+                        hidden
+                        onChange={(e) => setImageFile(e.target.files[0])}
+                        />
+                    </Button>
 
-                    {/* Buttons */}
+                    {imageFile && (
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        <Typography variant="body2" sx={{ fontSize: "0.8rem", color: "#555" }}>
+                            {imageFile.name}
+                        </Typography>
+                        <IconButton size="small" onClick={() => setImageFile(null)}>
+                            <CloseIcon fontSize="small" />
+                        </IconButton>
+                        </Box>
+                    )}
                     <Box sx={{ width: "80%", display: "flex", justifyContent: "space-between" }}>
                         <Button
                             variant="outlined"
