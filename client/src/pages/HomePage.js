@@ -13,6 +13,8 @@ import UserMenu from "../components/UserMenu";
 import AddRecipe from "../components/AddRecipe";
 import { Snackbar } from "@mui/material";
 import { Dialog } from "@mui/material";
+import MuiAlert from "@mui/material/Alert";
+
 
 
 
@@ -232,7 +234,7 @@ const HomePage = () => {
         <Box sx={{ padding: "8px" }}>
             <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)}>
                 <Box p={2}>
-                    <Typography variant="h6" gutterBottom>?האם אתה בטוח שברצונך למחוק את המתכון</Typography>
+                    <Typography variant="h6" gutterBottom>?האם למחוק את המתכון</Typography>
                     <Box display="flex" gap={2} mt={2}>
                         <Button onClick={handleConfirmDelete} color="error" variant="contained">מחק</Button>
                         <Button onClick={() => setDialogOpen(false)} color="primary">בטל</Button>
@@ -240,19 +242,11 @@ const HomePage = () => {
                 </Box>
             </Dialog>
 
-            <Snackbar
-            open={snackbarOpen}
-            autoHideDuration={3000}
-            onClose={() => setSnackbarOpen(false)}
-            message={snackbarMessage}
-            anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-            ContentProps={{
-                sx: {
-                backgroundColor: snackbarSeverity === 'success' ? 'green' : 'red',
-                color: 'white'
-                }
-            }}
-            />
+            <Snackbar open={snackbarOpen} autoHideDuration={3000} onClose={() => setSnackbarOpen(false)}>
+                <MuiAlert onClose={() => setSnackbarOpen(false)} severity="success" sx={{ width: '100%' }}>
+                    {snackbarMessage}
+                </MuiAlert>
+            </Snackbar>
 
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>    
                 <UserMenu user={user} setUser={setUser} />

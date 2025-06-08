@@ -5,6 +5,10 @@ const ChatGPTService = require("../services/ChatGPTService");
 const RecipeUtils = require("../utils/RecipeUtils");
 const cheerio = require('cheerio');
 const axios = require('axios');
+const multer = require("multer");
+const sharp = require("sharp");
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
 
 
 
@@ -50,14 +54,22 @@ router.get("/recipes/:userName", async (req, res) => {
 /**
  * Save a recipe
  */
-router.post("/recipes", async (req, res) => {
+router.post("/recipes", upload.single("image"), async (req, res) => {
     let { userName, text } = req.body;
-    const recipeUtils = new RecipeUtils();
     const chatGPTService = new ChatGPTService();
     let url;
 
     if (!userName || !text) {
         return res.status(400).json({ error: "Missing required fields" });
+    }
+    let imageUrl;
+    if(req.file){
+        const resizedBuffer = await sharp(req.file.buffer)
+        .resize({ width: 800 })
+        .jpeg({ quality: 80 })
+        .toBuffer();
+        const base64 = resizedBuffer.toString("base64");
+        imageUrl = `data:image/jpeg;base64,${base64}`;
     }
 
     try {
@@ -104,7 +116,7 @@ router.post("/recipes", async (req, res) => {
         return;
     }
     try{
-        const formattedRecipe = await chatGPTService.formatRecipe(text);
+        const formattedRecipe = await chatGPTService.formatRecipe(text,imageUrl);
         if(url){
             formattedRecipe.url=url;
         }

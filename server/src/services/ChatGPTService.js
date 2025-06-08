@@ -7,7 +7,7 @@ class ChatGPTService {
         });
     }
 
-    async formatRecipe(inputText) {
+    async formatRecipe(inputText, imageUrl) {
         try {
             const prompt = `
 אתה מומחה בארגון מתכונים בצורה ברורה ומובנית.
@@ -25,12 +25,46 @@ class ChatGPTService {
 התשובה הסופית צריכה להיות JSON שיכול להתפרסר (כך שבין התווים '{' ו-'}' יהיה אובייקט JSON תקין).
             הקלט: ${inputText}
             `;
+
+            let body;
+            if(!imageUrl){
+                body = {
+                    model: 'gpt-4o',
+                    messages: [
+                        { 
+                            role: 'user', 
+                            content: prompt 
+                        }
+                    ],
+                    max_tokens: 700,
+                }
+            }
+            else{
+                body = {
+                    model: "gpt-4o",
+                    messages: [
+                      {
+                        role: "user",
+                        content: [
+                          {
+                            type: "text",
+                            text: prompt
+                          },
+                          {
+                            type: "image_url",
+                            image_url: {
+                              url: imageUrl
+                            }
+                          }
+                        ]
+                      }
+                    ],
+                    max_tokens: 700
+                  }
+                  
+            }
     
-            const response = await this.openai.chat.completions.create({
-                model: 'gpt-4o',
-                messages: [{ role: 'user', content: prompt }],
-                max_tokens: 700,
-            });
+            const response = await this.openai.chat.completions.create(body);
 
             let recipeText = response.choices[0].message.content.trim();
 
