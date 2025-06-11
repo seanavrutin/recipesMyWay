@@ -7,7 +7,8 @@ import {
     Typography,
     Slide,
     CircularProgress,
-    Backdrop
+    Backdrop,
+    Grid,ButtonBase
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
@@ -15,6 +16,18 @@ import SendIcon from "@mui/icons-material/Send";
 import { Snackbar } from "@mui/material";
 import axios from "axios";
 import MuiAlert from "@mui/material/Alert";
+
+import TextFieldsIcon from '@mui/icons-material/TextFields';
+import LinkIcon from '@mui/icons-material/Link';
+import ImageIcon from '@mui/icons-material/Image';
+import InstagramIcon from '@mui/icons-material/Instagram';
+import {
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText
+} from '@mui/material';
+
 
 
 
@@ -27,6 +40,9 @@ const AddRecipe = ({ user,onRecipeAdded }) => {
     const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
     const [imageFile, setImageFile] = useState(null);
+    const [selectedInputMethod, setSelectedInputMethod] = useState("text");
+    const [linkUrl, setLinkUrl] = useState(null);
+    const [linkInstagram, setLinkInstagram] = useState(null);
 
     const handleToggle = () => {
         setOpen(!open);
@@ -40,6 +56,10 @@ const AddRecipe = ({ user,onRecipeAdded }) => {
 
     const resetState = () => {
         setRecipeText("");
+        setSelectedInputMethod("text");
+        setLinkUrl(null);
+        setLinkInstagram(null);
+        setImageFile(null);
         setLoading(false);
         setSuccess(false);
         setFinishedLoading(false);
@@ -53,8 +73,16 @@ const AddRecipe = ({ user,onRecipeAdded }) => {
         try{
             const formData = new FormData();
             formData.append("userName", user.email);
-            formData.append("text", recipeText);
-            if (imageFile) {
+            if(recipeText){
+                formData.append("text", recipeText);
+            }
+            if(linkUrl && selectedInputMethod == "link"){
+                formData.append("url", linkUrl);
+            }
+            if(linkUrl && selectedInputMethod == "instagram"){
+                formData.append("url", linkInstagram);
+            }
+            if (imageFile && selectedInputMethod == "image") {
               formData.append("image", imageFile);
             }
             
@@ -123,53 +151,126 @@ const AddRecipe = ({ user,onRecipeAdded }) => {
                     >
                         <CloseIcon sx={{ fontSize: "1.2rem" }}/>
                     </IconButton>
+                    <div></div>
 
-                    {/* Instructions */}
-                    <Typography
-                        variant="body2"
-                        sx={{ textAlign: "center", fontSize: "0.9rem", direction: "rtl", color: "#333", marginTop: "1rem" }}
-                    >
-                        ניתן להוסיף מתכון או על ידי הקלדה חופשית, או על ידי הדבקת קישור לאתר המכיל אותו, או על ידי העלת תמונה שלו
-                    </Typography>
-
-
-
-                    {/* Recipe Input */}
-                    <TextField
-                        fullWidth
-                        multiline
-                        minRows={4}
-                        placeholder="הקלד או הדבק כאן את המתכון..."
-                        value={recipeText}
-                        onChange={(e) => setRecipeText(e.target.value)}
-                        sx={{
-                            backgroundColor: "white",
-                            borderRadius: "4px",
-                            width: "90%",
-                        }}
-                    />
-                    <Button
-                        variant="outlined"
-                        component="label"
-                        sx={{ fontSize: "0.9rem", whiteSpace: "nowrap" }}
-                    >
-                        העלה תמונה (לא בכתב יד)
-                        <input
+                    <Grid container spacing={1} justifyContent="center" sx={{ width:"90%" }}> 
+                    {[
+                        { label: "טקסט חופשי", type: "text", icon: <TextFieldsIcon /> },
+                        { label: "קישור לאתר", type: "link", icon: <LinkIcon /> },
+                        { label: "תמונה של מתכון", type: "image", icon: <ImageIcon /> },
+                        { label: "קישור לריל באינסטגרם", type: "instagram", icon: <InstagramIcon /> },
+                    ].map((option, i) => (
+                        <Grid item xs={3} key={i}>
+                        <ButtonBase
+                            sx={{
+                                width: "100%",
+                                border: "1px solid #ccc",
+                                borderRadius: 2,
+                                padding: "8px 4px",
+                                flexDirection: "column",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                height: "70px",
+                                gap: "4px",
+                                backgroundColor: selectedInputMethod === option.type ? "#cde4ff" : "#fff",
+                                '&:hover': {
+                                    backgroundColor: selectedInputMethod === option.type ? "#bbd9ff" : "#e8e8e8"
+                                }
+                            }}
+                            variant={selectedInputMethod === option.type ? "contained" : "outlined"}
+                            onClick={() => {
+                                setSelectedInputMethod(option.type);
+                                if (option.type === "image") {
+                                    document.getElementById("imageUploadInput")?.click();
+                                }
+                            }}
+                        >
+                            {option.icon}
+                            <Typography variant="body2" sx={{ fontSize: "0.75rem" }}>
+                                {option.label}
+                            </Typography>
+                        </ButtonBase>
+                        </Grid>
+                    ))}
+                    </Grid>
+                    <input
                         type="file"
                         accept="image/*"
-                        hidden
-                        onChange={(e) => setImageFile(e.target.files[0])}
-                        />
-                    </Button>
+                        id="imageUploadInput"
+                        style={{ display: "none" }}
+                        onChange={(e) => setImageFile(e.target.files?.[0])}
+                    />
 
-                    {imageFile && (
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                        <Typography variant="body2" sx={{ fontSize: "0.8rem", color: "#555" }}>
-                            {imageFile.name}
-                        </Typography>
-                        <IconButton size="small" onClick={() => setImageFile(null)}>
-                            <CloseIcon fontSize="small" />
-                        </IconButton>
+                    {selectedInputMethod === "text" && (
+                        <TextField
+                            fullWidth
+                            multiline
+                            minRows={4}
+                            placeholder="הקלד כאן את המתכון..."
+                            value={recipeText}
+                            onChange={(e) => setRecipeText(e.target.value)}
+                            sx={{ backgroundColor: "white", borderRadius: "4px", width: "90%" }}
+                        />
+                    )}
+                    {selectedInputMethod === "link" && (
+                        <Box sx={{ width: "90%", display: "flex", flexDirection: "column", gap: 1 }}>
+                        <TextField
+                            sx={{ backgroundColor: "white", borderRadius: "4px", width: "90%" }}
+                            fullWidth
+                            multiline
+                            minRows={2}
+                            placeholder="הדבק את הקישור כאן"
+                            value={linkUrl}
+                            onChange={(e) => setLinkUrl(e.target.value)}
+                        />
+                        <TextField
+                            sx={{ backgroundColor: "white", borderRadius: "4px", width: "90%" }}
+                            fullWidth
+                            multiline
+                            minRows={2}
+                            placeholder="טקסט נוסף (אופציונלי)"
+                            value={recipeText}
+                            onChange={(e) => setRecipeText(e.target.value)}
+                        />
+                    </Box>
+                    )}
+
+                    {selectedInputMethod === "instagram" && (
+                        <Box sx={{ width: "90%", display: "flex", flexDirection: "column", gap: 1 }}>
+                            <TextField
+                                sx={{ backgroundColor: "white", borderRadius: "4px", width: "90%" }}
+                                fullWidth
+                                multiline
+                                minRows={2}
+                                placeholder="הדבק את הקישור כאן"
+                                value={linkInstagram}
+                                onChange={(e) => setLinkInstagram(e.target.value)}
+                            />
+                            <TextField
+                                sx={{ backgroundColor: "white", borderRadius: "4px", width: "90%" }}
+                                fullWidth
+                                multiline
+                                minRows={2}
+                                placeholder="טקסט נוסף (אופציונלי)"
+                                value={recipeText}
+                                onChange={(e) => setRecipeText(e.target.value)}
+                            />
+                        </Box>
+                    )}
+
+                    {selectedInputMethod === "image" && imageFile && (
+                        <Box sx={{ width: "90%", display: "flex", flexDirection: "column", gap: 1 }}>
+                            <Typography variant="caption">✔ תמונה עלתה בהצלחה: {imageFile.name}</Typography>
+                            <TextField
+                                sx={{ backgroundColor: "white", borderRadius: "4px", width: "90%" }}
+                                fullWidth
+                                multiline
+                                minRows={2}
+                                placeholder="טקסט נוסף (אופציונלי)"
+                                value={recipeText}
+                                onChange={(e) => setRecipeText(e.target.value)}
+                            />
                         </Box>
                     )}
                     <Box sx={{ width: "80%", display: "flex", justifyContent: "space-between" }}>

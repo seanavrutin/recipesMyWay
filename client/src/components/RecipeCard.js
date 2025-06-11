@@ -245,7 +245,7 @@ const RecipeCard = ({ recipeDoc, user,onUpdate, onDelete }) => {
                             <>
                                 {" ("}
                                 <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: "#1976d2", textDecoration: "underline" }}>
-                                    קישור
+                                    {url.includes("instagram") ? "אינסטגרם" : "קישור"}
                                 </a>
                                 {")"}
                             </>

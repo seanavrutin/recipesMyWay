@@ -55,14 +55,14 @@ router.get("/recipes/:userName", async (req, res) => {
  * Save a recipe
  */
 router.post("/recipes", upload.single("image"), async (req, res) => {
-    let { userName, text } = req.body;
+    let { userName, text, url } = req.body;
     const chatGPTService = new ChatGPTService();
-    let url;
 
-    if (!userName || !text) {
+    if (!userName) {
         return res.status(400).json({ error: "Missing required fields" });
     }
     let imageUrl;
+    let urlData;
     if(req.file){
         const resizedBuffer = await sharp(req.file.buffer)
         .resize({ width: 800 })
@@ -73,16 +73,15 @@ router.post("/recipes", upload.single("image"), async (req, res) => {
     }
 
     try {
-        if(text.includes('http')){
-            const { data } = await axios.get(text);
-            url = text;
+        if(url){
+            const { data } = await axios.get(url);
             if (data.includes('_Incapsula_Resource') || data.includes('Incapsula') || data.includes('Request unsuccessful')) {
                 res.status(400).json({ error: "האתר חסום בפני תוכנות אוטומטיות, ולא ניתן לטעון את המתכון ממנו. נסו אתר אחר או העתיקו את המתכון ידנית." });
                 return;
             }
 
             const $ = cheerio.load(data);
-          
+            
             // Remove likely comment sections
             $([
               '[id*="comment"]',
@@ -107,8 +106,12 @@ router.post("/recipes", upload.single("image"), async (req, res) => {
             // Optionally also remove footer, sidebar, etc.
             $('footer, nav, aside, script, style').remove();
           
-            // Extract clean text from body
-            text = $("body").text();       
+            if(url.includes("instagram")){
+                urlData = $('meta[name="description"]').attr('content');
+            }
+            else{
+                urlData = $("body").text();     
+            }  
         }
     }
     catch(error){
@@ -116,19 +119,33 @@ router.post("/recipes", upload.single("image"), async (req, res) => {
         return;
     }
     try{
-        const formattedRecipe = await chatGPTService.formatRecipe(text,imageUrl);
+        let chatInput = '';
+        if(text && urlData){
+            chatInput = "המלל הוא: "+text+" והקישור הוא: "+ urlData;
+        }
+        else if(text && !urlData){
+            chatInput = text;
+        }
+        else if(!text && urlData){
+            chatInput = urlData;
+        }
+        const formattedRecipe = await chatGPTService.formatRecipe(chatInput,imageUrl);
         if(url){
             formattedRecipe.url=url;
+        }
+        if(formattedRecipe.error){
+            res.status(500).json(formattedRecipe);
+            return;
         }
 
         const document = await CouchbaseService.saveRecipe(userName, formattedRecipe,undefined);
         if (document) {
             res.json(document);
         } else {
-            res.status(500).json({ error: "Failed to save recipe" });
+            res.status(500).json({ error: "מצטערים, קרתה תקלה בשמירת המתכון" });
         }
     } catch (error) {
-        res.status(500).json({ error: "Failed to save recipe" });
+        res.status(500).json({ error: "מצטערים, קרתה תקלה" });
     }
 });
 
