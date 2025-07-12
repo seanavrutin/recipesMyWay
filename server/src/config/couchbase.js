@@ -9,9 +9,12 @@ class CouchbaseService {
 
     async connect() {
         try {
-            this.cluster = await couchbase.connect("couchbase://10.100.102.15", {
+            this.cluster = await couchbase.connect(process.env.COUCHBASE_URL, {
                 username: "Administrator",
                 password: "Administrator",
+                timeout: {
+                    connectTimeout: 10000 // 10 seconds
+                  }
             });
 
             this.bucket = this.cluster.bucket("Recipes");
@@ -44,6 +47,11 @@ class CouchbaseService {
             return null;
         }
     }
+
+    async saveReadyDoc(docId, json) {
+        await this.collection.upsert(docId, json);
+    }
+    
 
     async getRecipesByUser(userName) {
         try {
