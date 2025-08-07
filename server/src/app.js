@@ -6,7 +6,7 @@ const RecipeRoutes = require("./routes/RecipeRoutes");
 const BackupRoutes = require("./routes/BackupRoutes");
 
 const cors = require("cors");
-const allowedOrigins = ["http://localhost:4000", "http://10.100.102.5:4000","https://recipesmyway.uk"];
+const allowedOrigins = ["http://localhost:4000", "http://10.100.102.5:4000","https://recipesmyway.uk","https://development.recipesmyway.pages.dev"];
 
 
 
