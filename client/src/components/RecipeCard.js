@@ -201,7 +201,7 @@ const RecipeCard = ({ recipeDoc, user, onUpdate, onDelete, isFullscreen = false,
         <Card sx={{ 
             marginBottom: isFullscreen ? "0" : "16px", 
             backgroundColor: isFullscreen ? "#f0f8ff" : "#ffffff78", // Full opacity for fullscreen
-            height: isFullscreen ? "100vh" : "auto", // Complete full screen height
+            height: isFullscreen ? "100dvh" : "auto", // Use dynamic viewport height for mobile
             borderRadius: isFullscreen ? 0 : undefined,
             boxShadow: isFullscreen ? "none" : undefined,
             maxWidth: isFullscreen ? "none" : undefined, // Full width for fullscreen
@@ -432,6 +432,8 @@ const RecipeCard = ({ recipeDoc, user, onUpdate, onDelete, isFullscreen = false,
                     px: 3,
                     py: 2,
                     pb: 4, // Extra bottom padding for fullscreen
+                    flex: 1,
+                    overflow: "auto", // Enable scrolling for content
                     animation: "contentFade 0.3s ease-out 0.3s both",
                     "@keyframes contentFade": {
                         "0%": { opacity: 0, transform: "translateY(10px)" },

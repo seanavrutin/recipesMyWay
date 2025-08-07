@@ -89,6 +89,26 @@ const HomePage = () => {
         }
     }, [user]);
 
+    // Handle back button/gesture
+    useEffect(() => {
+        const handlePopState = (event) => {
+            // If we're in fullscreen mode, prevent the default back behavior
+            if (fullscreenRecipe && !isClosingWithAnimation) {
+                event.preventDefault();
+                handleCloseFullscreen();
+                // Push a new state to prevent the browser from going back
+                window.history.pushState(null, '', window.location.pathname);
+            }
+        };
+
+        // Add event listener for popstate (back button/gesture)
+        window.addEventListener('popstate', handlePopState);
+
+        return () => {
+            window.removeEventListener('popstate', handlePopState);
+        };
+    }, [fullscreenRecipe, isClosingWithAnimation]);
+
     const fetchRecipes = async (email) => {
         try {
             setLoading(true);
@@ -232,6 +252,8 @@ const HomePage = () => {
 
       const handleOpenFullscreen = (recipe) => {
         if (fullscreenMode) {
+            // Push a new state when opening fullscreen
+            window.history.pushState(null, '', window.location.pathname);
             setFullscreenRecipe(recipe);
         }
       };
@@ -415,7 +437,7 @@ const HomePage = () => {
                         backgroundColor: "#f0f8ff", // Match user's preference
                         zIndex: 1300,
                         overflow: "hidden", // Prevent container scrolling
-                        animation: isClosingWithAnimation ? "slideOut 0.3s ease-in" : "slideIn 0.3s ease-out",
+                        animation: isClosingWithAnimation ? "slideOut 0.2s ease-in" : "slideIn 0.2s ease-out",
                         "@keyframes slideIn": {
                             "0%": { transform: "translateY(100%)" },
                             "100%": { transform: "translateY(0)" }
