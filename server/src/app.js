@@ -6,7 +6,7 @@ const RecipeRoutes = require("./routes/RecipeRoutes");
 const BackupRoutes = require("./routes/BackupRoutes");
 
 const cors = require("cors");
-const allowedOrigins = ["http://localhost:4000", "http://10.100.102.5:4000","https://recipesmyway.uk","https://development.recipesmyway.pages.dev"];
+const allowedOrigins = ["http://localhost:4000", "https://recipesmyway.uk","https://development.recipesmyway.pages.dev"];
 
 
 
@@ -24,6 +24,9 @@ class App {
                 origin: (origin, callback) => {
                     // Allow requests with no origin (like mobile apps or Postman)
                     if (!origin || allowedOrigins.includes(origin)) {
+                        callback(null, true);
+                    } else if (origin && origin.startsWith('http://10.100.102.')) {
+                        // Allow all IPs in the 10.100.102.x range
                         callback(null, true);
                     } else {
                         callback(new Error("Not allowed by CORS"));
