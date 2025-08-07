@@ -35,8 +35,22 @@ const HomePage = () => {
     const [snackbarMessage, setSnackbarMessage] = useState('');
     const [snackbarSeverity, setSnackbarSeverity] = useState('success');
     const [deleteTargetId, setDeleteTargetId] = useState(null);
+    const [fullscreenMode, setFullscreenMode] = useState(false);
 
+    // Function to save fullscreen preference to localStorage
+    const saveFullscreenPreference = (preference) => {
+        const data = JSON.parse(localStorage.getItem("recipesMyWay")) || {};
+        data.fullscreenMode = preference;
+        localStorage.setItem("recipesMyWay", JSON.stringify(data));
+    };
 
+    // Custom setter that also saves to localStorage
+    const updateFullscreenMode = (value) => {
+        setFullscreenMode(value);
+        saveFullscreenPreference(value);
+    };
+    const [fullscreenRecipe, setFullscreenRecipe] = useState(null);
+    const [isClosingWithAnimation, setIsClosingWithAnimation] = useState(false);
 
     const navigate = useNavigate();
     const fetchCalled = useRef(false);
@@ -45,6 +59,12 @@ const HomePage = () => {
         const data = JSON.parse(localStorage.getItem("recipesMyWay"));
         // const data={};
         // data.token = "eyJhbGciOiJSUzI1NiIsImtpZCI6IjVkMTJhYjc4MmNiNjA5NjI4NWY2OWU0OGFlYTk5MDc5YmI1OWNiODYiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhenAiOiI4NDk5NDMzNDQ1OTUtN3FsY2NuZWVlMWZtc3NzNGozcDdxYTA1cmw3YnRyaDUuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJhdWQiOiI4NDk5NDMzNDQ1OTUtN3FsY2NuZWVlMWZtc3NzNGozcDdxYTA1cmw3YnRyaDUuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJzdWIiOiIxMTA4Mzc0MzkwNzE5NjE4MjEyNzAiLCJlbWFpbCI6InNlYW5hdnJ1dGluQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJuYmYiOjE3Mzk2MzIzODcsIm5hbWUiOiJTZWFuIEF2cnV0aW4iLCJwaWN0dXJlIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvQUNnOG9jSWljanVLUnd5Sk9iS3JvOGdrV3lsZUFXSnMzMXQwcml3X1E0YUQ0T0VwR1JKYk9yTT1zOTYtYyIsImdpdmVuX25hbWUiOiJTZWFuIiwiZmFtaWx5X25hbWUiOiJBdnJ1dGluIiwiaWF0IjoxNzM5NjMyNjg3LCJleHAiOjE3Mzk2MzYyODcsImp0aSI6IjQ2OWNiM2IyYjJiYTRhMjYwYzJkNzBjZmVhZmZjMzY3MTM3ZmQxZDQifQ.U1m3Tknwf-Bk4kS0YQpjuaMJJcXlLs_X-9XeS_Gf_YGI6JIYGzE3da0Lgta1JpUkZp5HwYspNalitHkGojK_s0xToSjfYaDStv0Gf-2tSZ_9oaapGE2OdMEIKMIcLJrnBrtEdLSFOAvkOGTjNz0TGa8WU2DkvOyKBmcQq7rlmIVmZbJn2rN61issCbPzlJZ-lBy-K7LS3uFfIrhr7f3VZRezn5reP3DwJ1aCOhso9tL5-Nt5QltXNv6-8l9mP6X9sX0H-HYsWEbm7KbVQXTk5n1ZApNI_CmHo8tGombHUKfs_4q1pVCXd-1izxc58FJBy1y28aihJgx8Kad9-sulgg";
+        
+        // Load fullscreen preference
+        if (data?.fullscreenMode !== undefined) {
+            setFullscreenMode(data.fullscreenMode);
+        }
+
         if (data?.token) {
             try {
                 const decoded = jwtDecode(data.token);
@@ -192,6 +212,11 @@ const HomePage = () => {
             setSelectedCategories(newCategories);
             setSnackbarMessage("המתכון נמחק בהצלחה.");
             setSnackbarSeverity('success');
+            
+            // Close fullscreen if the deleted recipe was open
+            if (fullscreenRecipe && fullscreenRecipe.id === deleteTargetId) {
+                handleCloseFullscreen();
+            }
           } else {
             setSnackbarMessage("שגיאה במחיקת המתכון.");
             setSnackbarSeverity('error');
@@ -203,6 +228,21 @@ const HomePage = () => {
         } finally {
           setSnackbarOpen(true);
         }
+      };
+
+      const handleOpenFullscreen = (recipe) => {
+        if (fullscreenMode) {
+            setFullscreenRecipe(recipe);
+        }
+      };
+
+      const handleCloseFullscreen = () => {
+        setIsClosingWithAnimation(true);
+        // Close fullscreen immediately so main screen appears
+        setTimeout(() => {
+          setFullscreenRecipe(null);
+          setIsClosingWithAnimation(false);
+        }, 300); // Wait for animation to complete
       };
       
     
@@ -249,7 +289,12 @@ const HomePage = () => {
             </Snackbar>
 
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>    
-                <UserMenu user={user} setUser={setUser} />
+                <UserMenu 
+                    user={user} 
+                    setUser={setUser} 
+                    fullscreenMode={fullscreenMode}
+                    setFullscreenMode={updateFullscreenMode}
+                />
                 <Typography
                     variant="h4"
                     align="center"
@@ -267,7 +312,7 @@ const HomePage = () => {
             </Box>
             <br></br>
 
-            {!loading && !error && recipes.length > 0 && (
+            {!loading && !error && recipes.length > 0 && (!fullscreenRecipe || isClosingWithAnimation) && (
                 <>
                     <SearchBar searchValue={searchValue} onSearchChange={handleSearch} />
                     <FilterBar
@@ -358,7 +403,46 @@ const HomePage = () => {
                     </Box>
                 )}
 
-            {!loading && !error && filteredRecipes.length > 0 && (
+            {/* Fullscreen Recipe Display */}
+            {fullscreenRecipe && (
+                <Box
+                    sx={{
+                        position: "fixed",
+                        top: 0, // Complete full screen
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: "#f0f8ff", // Match user's preference
+                        zIndex: 1300,
+                        overflow: "hidden", // Prevent container scrolling
+                        animation: isClosingWithAnimation ? "slideOut 0.3s ease-in" : "slideIn 0.3s ease-out",
+                        "@keyframes slideIn": {
+                            "0%": { transform: "translateY(100%)" },
+                            "100%": { transform: "translateY(0)" }
+                        },
+                        "@keyframes slideOut": {
+                            "0%": { transform: "translateY(0)" },
+                            "100%": { transform: "translateY(100%)" }
+                        }
+                    }}
+                >
+                    <RecipeCard
+                        recipeDoc={fullscreenRecipe}
+                        user={user}
+                        onUpdate={(recipe) => {
+                            handleRecipeUpdate(recipe);
+                            setFullscreenRecipe(recipe); // Update the fullscreen recipe too
+                        }}
+                        onDelete={(id) => handleDeleteClick(id)}
+                        isFullscreen={true}
+                        onCloseFullscreen={handleCloseFullscreen}
+                        fullscreenMode={fullscreenMode}
+                        onOpenFullscreen={handleOpenFullscreen}
+                    />
+                </Box>
+            )}
+
+            {!loading && !error && filteredRecipes.length > 0 && (!fullscreenRecipe || isClosingWithAnimation) && (
                 <InfiniteScroll
                     dataLength={filteredRecipes.length}
                     next={() => {}}
@@ -382,6 +466,10 @@ const HomePage = () => {
                         index={index}
                         onUpdate={(recipe) => handleRecipeUpdate(recipe)}
                         onDelete={(id) => handleDeleteClick(id)}
+                        isFullscreen={false}
+                        onCloseFullscreen={handleCloseFullscreen}
+                        fullscreenMode={fullscreenMode}
+                        onOpenFullscreen={handleOpenFullscreen}
                     />
                     ))
                 ) : (
@@ -401,6 +489,10 @@ const HomePage = () => {
                             user={user}
                             onUpdate={(recipe) => handleRecipeUpdate(recipe)}
                             onDelete={(id) => handleDeleteClick(id)}
+                            isFullscreen={false}
+                            onCloseFullscreen={handleCloseFullscreen}
+                            fullscreenMode={fullscreenMode}
+                            onOpenFullscreen={handleOpenFullscreen}
                         />
                         ))}
                     </Box>

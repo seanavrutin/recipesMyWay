@@ -15,7 +15,9 @@ import {
     TextField,
     Typography,
     Badge,
-    CircularProgress
+    CircularProgress,
+    Checkbox,
+    FormControlLabel
 } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import HourglassEmptyIcon from "@mui/icons-material/HourglassEmpty";
@@ -25,7 +27,7 @@ import { useFontSize } from "../context/FontSizeContext";
 import axios from "axios";
 
 
-const UserMenu = ({ user,setUser }) => {
+const UserMenu = ({ user,setUser, fullscreenMode, setFullscreenMode }) => {
     const [menuAnchor, setMenuAnchor] = useState(null);
     const [fontSizeOpen, setFontSizeOpen] = useState(false);
     const { fontSize, setFontSize } = useFontSize(); // Restore Font Size Control
@@ -220,6 +222,21 @@ const UserMenu = ({ user,setUser }) => {
                         />
                     </Box>
                 )}
+
+                {/* Fullscreen Recipe Mode Toggle */}
+                <MenuItem sx={{ minHeight: "5px", padding: 0 }}>
+                    <FormControlLabel
+                        control={
+                            <Checkbox
+                                checked={fullscreenMode}
+                                onChange={(e) => setFullscreenMode(e.target.checked)}
+                                size="small"
+                            />
+                        }
+                        label="מתכון במסך מלא"
+                        sx={{ fontSize: "0.875rem", margin: 0 }}
+                    />
+                </MenuItem>
                 <MenuItem onClick={() => {localStorage.removeItem("recipesMyWay"); window.location.reload();}} sx={{ justifyContent: "left", minHeight: "5px"}}>
                     התנתק
                 </MenuItem>
