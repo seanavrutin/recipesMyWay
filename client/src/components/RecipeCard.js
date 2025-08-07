@@ -315,7 +315,7 @@ const RecipeCard = ({ recipeDoc, user, onUpdate, onDelete, isFullscreen = false,
                         display: "flex", 
                         justifyContent: "space-around", 
                         alignItems: "center",
-                        py: 2,
+                        // py: 2,
                         borderBottom: "1px solid #eee",
                         animation: "buttonsSlide 0.6s ease-out 0.2s both",
                         "@keyframes buttonsSlide": {
@@ -432,7 +432,7 @@ const RecipeCard = ({ recipeDoc, user, onUpdate, onDelete, isFullscreen = false,
                     px: 3,
                     py: 2,
                     pb: 4, // Extra bottom padding for fullscreen
-                    animation: "contentFade 0.8s ease-out 0.4s both",
+                    animation: "contentFade 0.3s ease-out 0.3s both",
                     "@keyframes contentFade": {
                         "0%": { opacity: 0, transform: "translateY(10px)" },
                         "100%": { opacity: 1, transform: "translateY(0)" }
@@ -446,7 +446,7 @@ const RecipeCard = ({ recipeDoc, user, onUpdate, onDelete, isFullscreen = false,
                     <Box
                         sx={{
                             textAlign: "center",
-                            marginY: "8px",
+                            // marginY: "8px",
                             cursor: "pointer",
                         }}
                         onClick={handleToggleIngredients} // Expand/collapse ingredients
