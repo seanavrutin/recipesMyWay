@@ -1,4 +1,10 @@
 const express = require("express");
+const fs = require("fs");
+const multer = require("multer");
+const unzipper = require("unzipper");
+const path = require("path");
+const upload = multer({ dest: "uploads/" });
+
 const CouchbaseService = require("../config/couchbase");
 const ZippingService = require("../services/ZippingService");
 const GoogleDriveService = require("../services/GoogleDriveService");
@@ -27,5 +33,41 @@ router.get("/backup", async (req, res) => {
         res.status(500).json({ error: "Backup process failed." });
     }
 });
+
+router.post("/uploadFromBackup", upload.single("backupZip"), async (req, res) => {
+    const zipPath = req.file?.path;
+    if (!zipPath) return res.status(400).send("No zip file uploaded.");
+  
+    const extractDir = path.join("uploads", `extracted_${Date.now()}`);
+    fs.mkdirSync(extractDir);
+  
+    // Extract ZIP
+    await fs.createReadStream(zipPath).pipe(unzipper.Extract({ path: extractDir })).promise();
+  
+    const files = fs.readdirSync(extractDir);
+    let successCount = 0, errorCount = 0;
+  
+    for (const fileName of files) {
+      try {
+        const filePath = path.join(extractDir, fileName);
+        const content = fs.readFileSync(filePath, "utf-8");
+        const json = JSON.parse(content);
+        const docId = path.basename(fileName, ".json");
+
+        await CouchbaseService.saveReadyDoc(docId, json)
+  
+        successCount++;
+      } catch (err) {
+        console.error(`Error processing ${fileName}:`, err.message);
+        errorCount++;
+      }
+    }
+  
+    // Cleanup
+    fs.rmSync(zipPath, { force: true });
+    fs.rmSync(extractDir, { recursive: true, force: true });
+  
+    res.json({ uploaded: successCount, failed: errorCount });
+  });
 
 module.exports = router;
