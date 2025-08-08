@@ -51,6 +51,7 @@ const HomePage = () => {
     };
     const [fullscreenRecipe, setFullscreenRecipe] = useState(null);
     const [isClosingWithAnimation, setIsClosingWithAnimation] = useState(false);
+    const closingRef = useRef(false); // Track closing state with ref
 
     const navigate = useNavigate();
     const fetchCalled = useRef(false);
@@ -93,11 +94,17 @@ const HomePage = () => {
     useEffect(() => {
         const handlePopState = (event) => {
             // If we're in fullscreen mode, prevent the default back behavior
-            if (fullscreenRecipe && !isClosingWithAnimation) {
+            if (fullscreenRecipe && !isClosingWithAnimation && !closingRef.current) {
+                closingRef.current = true;
                 event.preventDefault();
                 handleCloseFullscreen();
                 // Push a new state to prevent the browser from going back
                 window.history.pushState(null, '', window.location.pathname);
+                
+                // Reset the ref after animation completes
+                setTimeout(() => {
+                    closingRef.current = false;
+                }, 350); // Slightly longer than animation
             }
         };
 
@@ -275,10 +282,12 @@ const HomePage = () => {
 
       const handleCloseFullscreen = () => {
         setIsClosingWithAnimation(true);
+        closingRef.current = true; // Set ref immediately
         // Close fullscreen with animation
         setTimeout(() => {
           setFullscreenRecipe(null);
           setIsClosingWithAnimation(false);
+          closingRef.current = false; // Reset ref after completion
         }, 300); // Wait for animation to complete
       };
       
