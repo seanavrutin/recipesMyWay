@@ -14,7 +14,7 @@ import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
 import SendIcon from "@mui/icons-material/Send";
 import { Snackbar } from "@mui/material";
-import axios from "axios";
+import { recipeAPI } from "../services/api";
 import MuiAlert from "@mui/material/Alert";
 
 import TextFieldsIcon from '@mui/icons-material/TextFields';
@@ -69,7 +69,6 @@ const AddRecipe = ({ user,onRecipeAdded }) => {
         setLoading(true);
         setSuccess(false);
 
-        const SERVER = process.env.REACT_APP_SERVER_ADDRESS;
         try{
             const formData = new FormData();
             formData.append("userName", user.email);
@@ -86,17 +85,15 @@ const AddRecipe = ({ user,onRecipeAdded }) => {
               formData.append("image", imageFile);
             }
             
-            let response = await axios.post(`${SERVER}/api/recipes`, formData, {
-              headers: {
-                "Content-Type": "multipart/form-data"
-              }
-            });
+            let response = await recipeAPI.createRecipe(formData);
             
-            onRecipeAdded(response.data);
+            onRecipeAdded(response);
             setLoading(false);
             setSuccess(true);
             setSnackbarOpen(true);
             handleClose();
+            
+            // Cache is automatically cleared in the API service
         }
         catch(error){
             if(error?.response?.data?.error){
