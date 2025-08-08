@@ -51,7 +51,6 @@ const HomePage = () => {
     };
     const [fullscreenRecipe, setFullscreenRecipe] = useState(null);
     const [isClosingWithAnimation, setIsClosingWithAnimation] = useState(false);
-    const closingRef = useRef(false); // Track closing state with ref
 
     const navigate = useNavigate();
     const fetchCalled = useRef(false);
@@ -90,29 +89,34 @@ const HomePage = () => {
         }
     }, [user]);
 
-    // Handle back button/gesture
+    // Handle direct navigation to recipe hash
     useEffect(() => {
-        const handlePopState = (event) => {
-            // If we're in fullscreen mode, prevent the default back behavior
-            if (fullscreenRecipe && !isClosingWithAnimation && !closingRef.current) {
-                closingRef.current = true;
-                event.preventDefault();
+        const hash = window.location.hash;
+        const recipeMatch = hash.match(/#recipe=(.+)/);
+        
+        if (recipeMatch && fullscreenMode && recipes.length > 0) {
+            const recipeId = recipeMatch[1];
+            const recipe = recipes.find(r => r.id === recipeId);
+            if (recipe) {
+                setFullscreenRecipe(recipe);
+            }
+        }
+    }, [recipes, fullscreenMode]);
+
+    // Handle hash changes for recipe navigation
+    useEffect(() => {
+        const handleHashChange = () => {
+            // If hash is cleared and we have a fullscreen recipe, close it
+            if (!window.location.hash && fullscreenRecipe && !isClosingWithAnimation) {
                 handleCloseFullscreen();
-                // Push a new state to prevent the browser from going back
-                window.history.pushState(null, '', window.location.pathname);
-                
-                // Reset the ref after animation completes
-                setTimeout(() => {
-                    closingRef.current = false;
-                }, 350); // Slightly longer than animation
             }
         };
 
-        // Add event listener for popstate (back button/gesture)
-        window.addEventListener('popstate', handlePopState);
+        // Listen for hashchange (back/forward navigation)
+        window.addEventListener('hashchange', handleHashChange);
 
         return () => {
-            window.removeEventListener('popstate', handlePopState);
+            window.removeEventListener('hashchange', handleHashChange);
         };
     }, [fullscreenRecipe, isClosingWithAnimation]);
 
@@ -274,20 +278,18 @@ const HomePage = () => {
 
       const handleOpenFullscreen = (recipe) => {
         if (fullscreenMode) {
-            // Push a new state when opening fullscreen
-            window.history.pushState(null, '', window.location.pathname);
+            // Set hash for recipe (no route change, smooth)
+            window.location.hash = `#recipe=${recipe.id}`;
             setFullscreenRecipe(recipe);
         }
       };
 
       const handleCloseFullscreen = () => {
         setIsClosingWithAnimation(true);
-        closingRef.current = true; // Set ref immediately
         // Close fullscreen with animation
         setTimeout(() => {
           setFullscreenRecipe(null);
           setIsClosingWithAnimation(false);
-          closingRef.current = false; // Reset ref after completion
         }, 300); // Wait for animation to complete
       };
       
