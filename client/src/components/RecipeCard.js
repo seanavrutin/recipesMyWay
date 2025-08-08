@@ -3,7 +3,7 @@ import { Card, CardHeader, CardContent, Collapse, Typography, IconButton,TextFie
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { useFontSize } from "../context/FontSizeContext";
-import axios from "axios";
+import { recipeAPI } from "../services/api";
 import { Snackbar, Alert } from "@mui/material";
 import MuiAlert from "@mui/material/Alert";
 import ShareIcon from '@mui/icons-material/Share';
@@ -118,12 +118,13 @@ const RecipeCard = ({ recipeDoc, user, onUpdate, onDelete, isFullscreen = false,
         let updatedRecipe = convertTextToRecipe(editedText);
         console.log(updatedRecipe)
         try {
-            const SERVER = process.env.REACT_APP_SERVER_ADDRESS;
-            let newRecipeDoc = await axios.post(`${SERVER}/api/updateRecipe`, {userName:recipeDoc.userName, recipe: updatedRecipe, docId: recipeDoc.id });
+            let newRecipeDoc = await recipeAPI.updateRecipe({userName:recipeDoc.userName, recipe: updatedRecipe, docId: recipeDoc.id });
             setEditMode(false);
-            recipeDoc = newRecipeDoc.data;
-            onUpdate(newRecipeDoc.data);
+            recipeDoc = newRecipeDoc;
+            onUpdate(newRecipeDoc);
             setSnackbarOpen(true);
+            
+            // Cache is automatically cleared in the API service
         } catch (err) {
             alert("שגיאה בעדכון המתכון");
         }

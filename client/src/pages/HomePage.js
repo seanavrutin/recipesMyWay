@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import { userAPI, recipeAPI } from "../services/api";
 import {jwtDecode} from "jwt-decode";
 import RecipeCard from "../components/RecipeCard";
 import SearchBar from "../components/SearchBar";
@@ -94,9 +94,27 @@ const HomePage = () => {
             setLoading(true);
             setError(null);
 
-            const SERVER = process.env.REACT_APP_SERVER_ADDRESS;
-            const response = await axios.get(SERVER+`/api/recipes/${email}`);
-            const fetchedRecipeDocs = response.data;
+            const fetchedRecipeDocs = await recipeAPI.getRecipes(email, (updatedRecipes, currentFilters) => {
+                // Background update callback - only called if data actually changed
+                console.log('Background update received, updating UI...');
+                console.log('Background update - Captured filters:', currentFilters);
+                
+                const extractedCategories = [...new Set(updatedRecipes.flatMap(item => item.recipe.categories))];
+                setRecipes(updatedRecipes);
+                setCategories(extractedCategories);
+                
+                // Apply the captured filters to the new data
+                console.log('Background update - Current recipes count:', recipes.length);
+                console.log('Background update - Updated recipes count:', updatedRecipes.length);
+                
+                // Apply the captured filters to the updated recipes
+                filterRecipes(currentFilters.searchValue, currentFilters.selectedCategories, updatedRecipes);
+                
+                // Show toast notification for background update
+                setSnackbarMessage("המתכונים עודכנו");
+                setSnackbarSeverity('info');
+                setSnackbarOpen(true);
+            });
 
             const extractedCategories = [...new Set(fetchedRecipeDocs.flatMap(item => item.recipe.categories))];
             setRecipes(fetchedRecipeDocs);
@@ -112,15 +130,14 @@ const HomePage = () => {
 
     const fetchUser = async (decoded) => {
         try {
-            const SERVER = process.env.REACT_APP_SERVER_ADDRESS;
-            const userResponse = await axios.get(`${SERVER}/api/user/${decoded.email}`);
-            decoded.hebName=userResponse.data.given_name+" "+userResponse.data.family_name;
-            decoded.familyMembers = userResponse.data.familyMembers;
+            const userResponse = await userAPI.getUser(decoded.email);
+            decoded.hebName=userResponse.given_name+" "+userResponse.family_name;
+            decoded.familyMembers = userResponse.familyMembers;
             setUser(decoded);
 
             const localData = JSON.parse(localStorage.getItem("recipesMyWay"));
-            localData.name = userResponse.data.name;
-            localData.familyMembers = userResponse.data.familyMembers;
+            localData.name = userResponse.name;
+            localData.familyMembers = userResponse.familyMembers;
             localStorage.setItem("recipesMyWay", JSON.stringify(localData));
         } catch (error) {
             console.error("Error fetching user data", error);
@@ -129,21 +146,25 @@ const HomePage = () => {
 
     const handleSearch = (value) => {
         setSearchValue(value);
+        window.currentSearchValue = value;
         filterRecipes(value, selectedCategories);
     };
 
     const handleCategoryChange = (selected) => {
         setSelectedCategories(selected);
+        window.currentSelectedCategories = selected;
         filterRecipes(searchValue, selected);
     };
 
-    const filterRecipes = (searchValue, selectedCategories) => {
+    const filterRecipes = (searchValue, selectedCategories, existingRecipes = null) => {
         if (selectedCategories.length === 0 && searchValue.trim() === "") {
             setFilteredRecipes([]);
             return;
         }
 
-        const filtered = recipes.filter((recipeDoc) => {
+        const recipesToFilter = existingRecipes || recipes;
+
+        const filtered = recipesToFilter.filter((recipeDoc) => {
             const matchesSearch = 
                 recipeDoc.recipe.title.includes(searchValue)|| 
                 recipeDoc.recipe.ingredients.some(ing => ing.includes(searchValue)) || 
@@ -198,28 +219,22 @@ const HomePage = () => {
         setDialogOpen(false);
       
         try {
-          const SERVER = process.env.REACT_APP_SERVER_ADDRESS;
-          const response = await axios.delete(`${SERVER}/api/recipes/${deleteTargetId}`);
+          await recipeAPI.deleteRecipe(deleteTargetId);
+          
+          const newRecipes = recipes.filter(r => r.id !== deleteTargetId);
+          const newFiltered = filteredRecipes.filter(r => r.id !== deleteTargetId);
+          const newCategories = [...new Set(newRecipes.flatMap(item => item.recipe.categories))];
       
-          if (response.status === 200) {
-            const newRecipes = recipes.filter(r => r.id !== deleteTargetId);
-            const newFiltered = filteredRecipes.filter(r => r.id !== deleteTargetId);
-            const newCategories = [...new Set(newRecipes.flatMap(item => item.recipe.categories))];
-      
-            setRecipes(newRecipes);
-            setFilteredRecipes(newFiltered);
-            setCategories(newCategories);
-            setSelectedCategories(newCategories);
-            setSnackbarMessage("המתכון נמחק בהצלחה.");
-            setSnackbarSeverity('success');
-            
-            // Close fullscreen if the deleted recipe was open
-            if (fullscreenRecipe && fullscreenRecipe.id === deleteTargetId) {
-                handleCloseFullscreen();
-            }
-          } else {
-            setSnackbarMessage("שגיאה במחיקת המתכון.");
-            setSnackbarSeverity('error');
+          setRecipes(newRecipes);
+          setFilteredRecipes(newFiltered);
+          setCategories(newCategories);
+          setSelectedCategories(newCategories);
+          setSnackbarMessage("המתכון נמחק בהצלחה.");
+          setSnackbarSeverity('success');
+          
+          // Close fullscreen if the deleted recipe was open
+          if (fullscreenRecipe && fullscreenRecipe.id === deleteTargetId) {
+              handleCloseFullscreen();
           }
         } catch (err) {
           console.error("Delete error:", err);

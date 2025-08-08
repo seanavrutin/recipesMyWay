@@ -24,7 +24,7 @@ import HourglassEmptyIcon from "@mui/icons-material/HourglassEmpty";
 import CancelIcon from "@mui/icons-material/Cancel";
 import CloseIcon from "@mui/icons-material/Close";
 import { useFontSize } from "../context/FontSizeContext";
-import axios from "axios";
+import { userAPI, familyAPI } from "../services/api";
 
 
 const UserMenu = ({ user,setUser, fullscreenMode, setFullscreenMode }) => {
@@ -67,12 +67,11 @@ const UserMenu = ({ user,setUser, fullscreenMode, setFullscreenMode }) => {
         setErrorFamily("");
         try {
             setLoadingFamily(true);
-            const SERVER = process.env.REACT_APP_SERVER_ADDRESS;
-            await axios.post(`${SERVER}/api/user/deleteFamily`, {
+            await userAPI.deleteFamilyMember({
                 mainUser: user.email,
                 modifiedFamilyMember: email,
             });
-            await axios.post(`${SERVER}/api/user/deleteFamily`, {
+            await userAPI.deleteFamilyMember({
                 mainUser: email,
                 modifiedFamilyMember: user.email,
             });
@@ -90,8 +89,7 @@ const UserMenu = ({ user,setUser, fullscreenMode, setFullscreenMode }) => {
         setErrorFamily("");
 
         try {
-            const SERVER = process.env.REACT_APP_SERVER_ADDRESS;
-            await axios.get(`${SERVER}/api/user/${newMemberEmail}`);
+            await familyAPI.addFamilyMember(newMemberEmail);
 
             // Simulating API call to add family member
             const newMember = { memberName: newMemberEmail, allowedToSeeMyRecipes: "true", allowedToSeeTheirRecipes: "pending" };
@@ -101,14 +99,14 @@ const UserMenu = ({ user,setUser, fullscreenMode, setFullscreenMode }) => {
                 familyMembers: [...prevUser.familyMembers, newMember]
             }));
 
-            await axios.put(`${SERVER}/api/user/family`, {
+            await userAPI.updateUserFamily({
                 mainUser: user.email,
                 modifiedFamilyMember: newMemberEmail,
                 allowedToSeeMyRecipes: "true",
                 allowedToSeeTheirRecipes: "pending"
             });
 
-            await axios.put(`${SERVER}/api/user/family`, {
+            await userAPI.updateUserFamily({
                 mainUser: newMemberEmail,
                 modifiedFamilyMember: user.email,
                 allowedToSeeMyRecipes: "pending",
@@ -117,7 +115,7 @@ const UserMenu = ({ user,setUser, fullscreenMode, setFullscreenMode }) => {
 
             setNewMemberEmail("");
         } catch (error) {
-            if(error.status==404){
+            if(error.response?.status === 404){
                 setErrorFamily("האימייל לא נמצא במערכת.");
             }
             else{
@@ -131,15 +129,14 @@ const UserMenu = ({ user,setUser, fullscreenMode, setFullscreenMode }) => {
 
     const handlePendingRequest = async (email,status) => {
         try {
-            const SERVER = process.env.REACT_APP_SERVER_ADDRESS;
-            await axios.put(`${SERVER}/api/user/family`, {
+            await userAPI.updateUserFamily({
                 mainUser: user.email,
                 modifiedFamilyMember: email,
                 allowedToSeeMyRecipes: status,
                 allowedToSeeTheirRecipes: status
             });
 
-            await axios.put(`${SERVER}/api/user/family`, {
+            await userAPI.updateUserFamily({
                 mainUser: email,
                 modifiedFamilyMember: user.email,
                 allowedToSeeMyRecipes: status,
