@@ -15,17 +15,19 @@ import {
     TextField,
     Typography,
     Badge,
-    CircularProgress
+    CircularProgress,
+    Checkbox,
+    FormControlLabel
 } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import HourglassEmptyIcon from "@mui/icons-material/HourglassEmpty";
 import CancelIcon from "@mui/icons-material/Cancel";
 import CloseIcon from "@mui/icons-material/Close";
 import { useFontSize } from "../context/FontSizeContext";
-import axios from "axios";
+import { userAPI, familyAPI } from "../services/api";
 
 
-const UserMenu = ({ user,setUser }) => {
+const UserMenu = ({ user,setUser, fullscreenMode, setFullscreenMode }) => {
     const [menuAnchor, setMenuAnchor] = useState(null);
     const [fontSizeOpen, setFontSizeOpen] = useState(false);
     const { fontSize, setFontSize } = useFontSize(); // Restore Font Size Control
@@ -65,12 +67,11 @@ const UserMenu = ({ user,setUser }) => {
         setErrorFamily("");
         try {
             setLoadingFamily(true);
-            const SERVER = process.env.REACT_APP_SERVER_ADDRESS;
-            await axios.post(`${SERVER}/api/user/deleteFamily`, {
+            await userAPI.deleteFamilyMember({
                 mainUser: user.email,
                 modifiedFamilyMember: email,
             });
-            await axios.post(`${SERVER}/api/user/deleteFamily`, {
+            await userAPI.deleteFamilyMember({
                 mainUser: email,
                 modifiedFamilyMember: user.email,
             });
@@ -88,8 +89,7 @@ const UserMenu = ({ user,setUser }) => {
         setErrorFamily("");
 
         try {
-            const SERVER = process.env.REACT_APP_SERVER_ADDRESS;
-            await axios.get(`${SERVER}/api/user/${newMemberEmail}`);
+            await familyAPI.addFamilyMember(newMemberEmail);
 
             // Simulating API call to add family member
             const newMember = { memberName: newMemberEmail, allowedToSeeMyRecipes: "true", allowedToSeeTheirRecipes: "pending" };
@@ -99,14 +99,14 @@ const UserMenu = ({ user,setUser }) => {
                 familyMembers: [...prevUser.familyMembers, newMember]
             }));
 
-            await axios.put(`${SERVER}/api/user/family`, {
+            await userAPI.updateUserFamily({
                 mainUser: user.email,
                 modifiedFamilyMember: newMemberEmail,
                 allowedToSeeMyRecipes: "true",
                 allowedToSeeTheirRecipes: "pending"
             });
 
-            await axios.put(`${SERVER}/api/user/family`, {
+            await userAPI.updateUserFamily({
                 mainUser: newMemberEmail,
                 modifiedFamilyMember: user.email,
                 allowedToSeeMyRecipes: "pending",
@@ -115,7 +115,7 @@ const UserMenu = ({ user,setUser }) => {
 
             setNewMemberEmail("");
         } catch (error) {
-            if(error.status==404){
+            if(error.response?.status === 404){
                 setErrorFamily("האימייל לא נמצא במערכת.");
             }
             else{
@@ -129,15 +129,14 @@ const UserMenu = ({ user,setUser }) => {
 
     const handlePendingRequest = async (email,status) => {
         try {
-            const SERVER = process.env.REACT_APP_SERVER_ADDRESS;
-            await axios.put(`${SERVER}/api/user/family`, {
+            await userAPI.updateUserFamily({
                 mainUser: user.email,
                 modifiedFamilyMember: email,
                 allowedToSeeMyRecipes: status,
                 allowedToSeeTheirRecipes: status
             });
 
-            await axios.put(`${SERVER}/api/user/family`, {
+            await userAPI.updateUserFamily({
                 mainUser: email,
                 modifiedFamilyMember: user.email,
                 allowedToSeeMyRecipes: status,
@@ -220,6 +219,21 @@ const UserMenu = ({ user,setUser }) => {
                         />
                     </Box>
                 )}
+
+                {/* Fullscreen Recipe Mode Toggle */}
+                <MenuItem sx={{ minHeight: "5px", padding: 0 }}>
+                    <FormControlLabel
+                        control={
+                            <Checkbox
+                                checked={fullscreenMode}
+                                onChange={(e) => setFullscreenMode(e.target.checked)}
+                                size="small"
+                            />
+                        }
+                        label="מתכון במסך מלא"
+                        sx={{ fontSize: "0.875rem", margin: 0 }}
+                    />
+                </MenuItem>
                 <MenuItem onClick={() => {localStorage.removeItem("recipesMyWay"); window.location.reload();}} sx={{ justifyContent: "left", minHeight: "5px"}}>
                     התנתק
                 </MenuItem>

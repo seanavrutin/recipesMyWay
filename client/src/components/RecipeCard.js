@@ -1,17 +1,18 @@
-import React, { use, useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardContent, Collapse, Typography, IconButton,TextField,Button, Box } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { useFontSize } from "../context/FontSizeContext";
-import axios from "axios";
+import { recipeAPI } from "../services/api";
 import { Snackbar, Alert } from "@mui/material";
 import MuiAlert from "@mui/material/Alert";
 import ShareIcon from '@mui/icons-material/Share';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { Dialog, DialogTitle, DialogContent, Tooltip } from '@mui/material';
 import WhatsAppIcon from "@mui/icons-material/WhatsApp";
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
-const RecipeCard = ({ recipeDoc, user,onUpdate, onDelete }) => {
+const RecipeCard = ({ recipeDoc, user, onUpdate, onDelete, isFullscreen = false, onCloseFullscreen, fullscreenMode, onOpenFullscreen }) => {
     const [expandedRecipe, setExpandedRecipe] = useState(false); // State for the entire recipe
     const [expandedIngredients, setExpandedIngredients] = useState(true); // State for ingredients section
     const [expandedInstructions, setExpandedInstructions] = useState(true); // State for instructions section
@@ -24,7 +25,11 @@ const RecipeCard = ({ recipeDoc, user,onUpdate, onDelete }) => {
     const [copied, setCopied] = useState(false);
 
     const handleToggleRecipe = () => {
-        setExpandedRecipe(!expandedRecipe);
+        if (fullscreenMode && !isFullscreen) {
+            onOpenFullscreen(recipeDoc);
+        } else {
+            setExpandedRecipe(!expandedRecipe);
+        }
     };
 
     const handleToggleIngredients = () => {
@@ -113,12 +118,13 @@ const RecipeCard = ({ recipeDoc, user,onUpdate, onDelete }) => {
         let updatedRecipe = convertTextToRecipe(editedText);
         console.log(updatedRecipe)
         try {
-            const SERVER = process.env.REACT_APP_SERVER_ADDRESS;
-            let newRecipeDoc = await axios.post(`${SERVER}/api/updateRecipe`, {userName:recipeDoc.userName, recipe: updatedRecipe, docId: recipeDoc.id });
+            let newRecipeDoc = await recipeAPI.updateRecipe({userName:recipeDoc.userName, recipe: updatedRecipe, docId: recipeDoc.id });
             setEditMode(false);
-            recipeDoc = newRecipeDoc.data;
-            onUpdate(newRecipeDoc.data);
+            recipeDoc = newRecipeDoc;
+            onUpdate(newRecipeDoc);
             setSnackbarOpen(true);
+            
+            // Cache is automatically cleared in the API service
         } catch (err) {
             alert("שגיאה בעדכון המתכון");
         }
@@ -185,8 +191,26 @@ const RecipeCard = ({ recipeDoc, user,onUpdate, onDelete }) => {
     const url = (recipeDoc.recipe.url && recipeDoc.recipe.url.length) > 0 ? recipeDoc.recipe.url : undefined;
     const notes = (recipeDoc.recipe.notes && recipeDoc.recipe.notes.length) > 0 ? recipeDoc.recipe.notes : undefined;
 
+    // Set expanded state to true for fullscreen mode
+    useEffect(() => {
+        if (isFullscreen) {
+            setExpandedRecipe(true);
+        }
+    }, [isFullscreen]);
+
     return (
-        <Card sx={{ marginBottom: "16px", backgroundColor: "#ffffff78" }}>
+        <Card sx={{ 
+            marginBottom: isFullscreen ? "0" : "16px", 
+            backgroundColor: isFullscreen ? "#f0f8ff" : "#ffffff78", // Full opacity for fullscreen
+            height: isFullscreen ? "100vh" : "auto", // Complete full screen height
+            borderRadius: isFullscreen ? 0 : undefined,
+            boxShadow: isFullscreen ? "none" : undefined,
+            maxWidth: isFullscreen ? "none" : undefined, // Full width for fullscreen
+            margin: isFullscreen ? "0" : undefined,
+            overflow: isFullscreen ? "hidden" : "visible", // No scrolling on card itself
+            display: isFullscreen ? "flex" : "block",
+            flexDirection: isFullscreen ? "column" : undefined
+        }}>
             <Dialog open={shareOpen} onClose={() => setShareOpen(false)}>
                 <DialogTitle sx={{ textAlign: "center" }}>שיתוף מתכון</DialogTitle>
                 <DialogContent>
@@ -229,61 +253,170 @@ const RecipeCard = ({ recipeDoc, user,onUpdate, onDelete }) => {
                 </MuiAlert>
             </Snackbar>
             {/* Recipe Header */}
-            <CardHeader
-                title={
-                    <Typography
-                        sx={{
-                            fontSize: fontSize * 1.2 + "px",
-                            userSelect: "none", // Disable text selection
-                            cursor: "pointer", // Indicate clickability
-                        }}
-                        align="right"
-                        onClick={handleToggleRecipe} // Expand/collapse recipe
-                    >
-                        {title}
-                        {url && (
-                            <>
-                                {" ("}
-                                <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: "#1976d2", textDecoration: "underline" }}>
-                                    {url.includes("instagram") ? "אינסטגרם" : "קישור"}
-                                </a>
-                                {")"}
-                            </>
-                        )}
-                    </Typography>
-                }
-                action={
-                    <>
+            {isFullscreen ? (
+                <Box 
+                    sx={{ 
+                        p: 2,
+                        flexShrink: 0, // Prevent header from shrinking
+                        position: "sticky",
+                        top: 0,
+                        backgroundColor: "#f0f8ff",
+                        zIndex: 10
+                    }}
+                >
+                    {/* Fullscreen Header */}
+                    <Box sx={{ 
+                        display: "flex", 
+                        alignItems: "center", 
+                        justifyContent: "center", 
+                        position: "relative",
+                        mb: 2
+                    }}>
+                        {/* Back Arrow */}
+                        <IconButton 
+                            onClick={onCloseFullscreen}
+                            sx={{ 
+                                position: "absolute", 
+                                right: 0,
+                                transition: "transform 0.2s ease",
+                                "&:hover": { transform: "scale(1.1)" }
+                            }}
+                        >
+                            <ArrowBackIcon />
+                        </IconButton>
+                        
+                        {/* Centered Title */}
+                        <Typography
+                            sx={{
+                                fontSize: fontSize * 1.4 + "px",
+                                fontWeight: "bold",
+                                textAlign: "center",
+                                animation: "titleSlide 0.5s ease-out",
+                                "@keyframes titleSlide": {
+                                    "0%": { transform: "translateX(-50px)", opacity: 0 },
+                                    "100%": { transform: "translateX(0)", opacity: 1 }
+                                }
+                            }}
+                        >
+                            {title}
+                            {url && (
+                                <>
+                                    {" ("}
+                                    <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: "#1976d2", textDecoration: "underline" }}>
+                                        {url.includes("instagram") ? "אינסטגרם" : "קישור"}
+                                    </a>
+                                    {")"}
+                                </>
+                            )}
+                        </Typography>
+                    </Box>
+                    
+                    {/* Action Buttons Row */}
+                    <Box sx={{ 
+                        display: "flex", 
+                        justifyContent: "space-around", 
+                        alignItems: "center",
+                        py: 2,
+                        borderBottom: "1px solid #eee",
+                        animation: "buttonsSlide 0.6s ease-out 0.2s both",
+                        "@keyframes buttonsSlide": {
+                            "0%": { transform: "translateY(20px)", opacity: 0 },
+                            "100%": { transform: "translateY(0)", opacity: 1 }
+                        }
+                    }}>
                         <Tooltip title="שתף">
-                            <IconButton onClick={() => handleShare()}>
+                            <IconButton onClick={() => handleShare()} size="large">
                                 <ShareIcon />
                             </IconButton>
                         </Tooltip>
                         <Tooltip title="ערוך">
-                            <IconButton onClick={() => handleEditClick()}>
+                            <IconButton onClick={() => handleEditClick()} size="large">
                                 <EditIcon />
                             </IconButton>
                         </Tooltip>
                         <Tooltip title="מחק">
-                            <IconButton onClick={() => onDelete(recipeDoc.id)}>
+                            <IconButton onClick={() => onDelete(recipeDoc.id)} size="large">
                                 <DeleteIcon />
                             </IconButton>
                         </Tooltip>
-                    </>
-                }
-            />
+                    </Box>
+                </Box>
+            ) : (
+                <CardHeader
+                    title={
+                        <Typography
+                            sx={{
+                                fontSize: fontSize * 1.2 + "px",
+                                userSelect: "none", // Disable text selection
+                                cursor: "pointer", // Indicate clickability
+                            }}
+                            align="right"
+                            onClick={handleToggleRecipe} // Expand/collapse recipe
+                        >
+                            {title}
+                            {url && (
+                                <>
+                                    {" ("}
+                                    <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: "#1976d2", textDecoration: "underline" }}>
+                                        {url.includes("instagram") ? "אינסטגרם" : "קישור"}
+                                    </a>
+                                    {")"}
+                                </>
+                            )}
+                        </Typography>
+                    }
+                    action={
+                        <>
+                            <Tooltip title="שתף">
+                                <IconButton onClick={() => handleShare()}>
+                                    <ShareIcon />
+                                </IconButton>
+                            </Tooltip>
+                            <Tooltip title="ערוך">
+                                <IconButton onClick={() => handleEditClick()}>
+                                    <EditIcon />
+                                </IconButton>
+                            </Tooltip>
+                            <Tooltip title="מחק">
+                                <IconButton onClick={() => onDelete(recipeDoc.id)}>
+                                    <DeleteIcon />
+                                </IconButton>
+                            </Tooltip>
+                        </>
+                    }
+                />
+            )}
 
             {/* Collapsible Recipe Content */}
-            <Collapse in={expandedRecipe} timeout="auto" unmountOnExit>
+            <Collapse 
+                in={expandedRecipe || isFullscreen} 
+                timeout="auto" 
+                unmountOnExit
+                sx={isFullscreen ? { 
+                    flex: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    overflow: "auto" // Allow scrolling
+                } : {}}
+            >
             {editMode ? (
-            <>
+            <Box sx={{ 
+                flex: 1, 
+                overflow: "auto", 
+                p: 2,
+                display: "flex",
+                flexDirection: "column"
+            }}>
                 <TextField
                     fullWidth
                     multiline
                     minRows={10}
                     value={editedText}
                     onChange={(e) => setEditedText(e.target.value)}
-                    sx={{ whiteSpace: "pre-line" }}
+                    sx={{ 
+                        whiteSpace: "pre-line",
+                        flex: 1
+                    }}
                 />
                 <Box sx={{ mt: 1, display: "flex", justifyContent: "flex-end", gap: 1 }}>
                 <Button
@@ -294,10 +427,22 @@ const RecipeCard = ({ recipeDoc, user,onUpdate, onDelete }) => {
                 </Button>
                 <Button variant="outlined" onClick={() => setEditMode(false)}>בטל</Button>
                 </Box>
-            </>
+            </Box>
             ) : (
-            <>
-                <CardContent>
+                <CardContent sx={isFullscreen ? {
+                    px: 3,
+                    py: 2,
+                    pb: 4, // Extra bottom padding for fullscreen
+                    animation: "contentFade 0.8s ease-out 0.4s both",
+                    "@keyframes contentFade": {
+                        "0%": { opacity: 0, transform: "translateY(10px)" },
+                        "100%": { opacity: 1, transform: "translateY(0)" }
+                    }
+                } : {
+                    px: 2,
+                    py: 1,
+                    pb: 2
+                }}>
                     {/* Ingredients Section */}
                     <Box
                         sx={{
@@ -501,7 +646,6 @@ const RecipeCard = ({ recipeDoc, user,onUpdate, onDelete }) => {
                         </span>
                     }
                 </CardContent>
-            </>
             )}
             </Collapse>
         </Card>

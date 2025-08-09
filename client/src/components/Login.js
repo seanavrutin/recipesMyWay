@@ -2,7 +2,7 @@ import React from "react";
 import { GoogleLogin } from "@react-oauth/google";
 import {jwtDecode} from "jwt-decode";
 import { Box, Typography } from "@mui/material";
-import axios from "axios";
+import { userAPI } from "../services/api";
 
 const Login = () => {
     const handleLoginSuccess = async (credentialResponse) => {
@@ -22,15 +22,12 @@ const Login = () => {
     };
 
     const checkIfUserExists = async (decoded) => {
-        const SERVER = process.env.REACT_APP_SERVER_ADDRESS;
         try {
-            const userData = await axios.get(`${SERVER}/api/user/${decoded.email}`);
-            if(userData.status == 200){
-                return;
-            }
+            await userAPI.getUser(decoded.email);
+            return;
         } catch (error) {
-            if(error.status == 404){
-                await axios.post(`${SERVER}/api/user`, {
+            if(error.response?.status === 404){
+                await userAPI.createUser({
                     userName: decoded.email,
                     given_name: decoded.given_name,
                     family_name: decoded.family_name
