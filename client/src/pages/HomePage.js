@@ -327,7 +327,7 @@ const HomePage = () => {
             </Box>
             <br></br>
 
-            {!loading && !error && recipes.length > 0 && (!fullscreenRecipe || isClosingWithAnimation) && (
+            {!loading && !error && recipes.length > 0 && (
                 <>
                     <SearchBar searchValue={searchValue} onSearchChange={handleSearch} />
                     <FilterBar
@@ -457,7 +457,7 @@ const HomePage = () => {
                 </Box>
             )}
 
-            {!loading && !error && filteredRecipes.length > 0 && (!fullscreenRecipe || isClosingWithAnimation) && (
+            {!loading && !error && filteredRecipes.length > 0 && (
                 <InfiniteScroll
                     dataLength={filteredRecipes.length}
                     next={() => {}}
