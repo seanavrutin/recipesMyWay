@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { authService } from './authService';
 
 // Base configuration
 const SERVER = process.env.REACT_APP_SERVER_ADDRESS;
@@ -12,10 +13,22 @@ const api = axios.create({
     },
 });
 
-// Request interceptor for adding auth tokens if needed
+// Request interceptor for adding auth tokens
 api.interceptors.request.use(
-    (config) => {
-        // You can add auth token here if needed in the future
+    async (config) => {
+        // Check if token is expiring soon and refresh if needed
+        const shouldRefresh = await authService.checkAndRefreshTokenIfNeeded();
+        
+        if (shouldRefresh) {
+            console.log('Token refreshed, continuing with request...');
+        }
+        
+        // Get the token from auth service and add to headers
+        const token = authService.getToken();
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        
         return config;
     },
     (error) => {
@@ -26,10 +39,21 @@ api.interceptors.request.use(
 // Response interceptor for consistent error handling
 api.interceptors.response.use(
     (response) => {
+        // Check if server sent a new token (for silent refresh)
+        const newToken = response.headers['x-new-token'];
+        if (newToken) {
+            console.log('Server provided new token, updating...');
+            authService.setToken(newToken);
+        }
+        
         return response;
     },
     (error) => {
         console.error('API Error:', error);
+        
+        // Handle authentication errors using auth service
+        authService.handleAuthError(error);
+        
         return Promise.reject(error);
     }
 );
@@ -291,6 +315,9 @@ export const cacheAPI = {
     }
 };
 
+// Create named export for authAPI
+export const authAPI = authService;
+
 // Export the base api instance for custom calls if needed
 export { api };
 
@@ -300,5 +327,6 @@ export default {
     recipeAPI,
     familyAPI,
     cacheAPI,
+    authAPI,
     api,
 };

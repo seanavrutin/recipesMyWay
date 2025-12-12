@@ -18,10 +18,31 @@ const upload = multer({ storage });
 })();
 
 /**
+ * Test authentication endpoint
+ * This route is protected by authMiddleware and will return user info
+ */
+router.get("/test-auth", (req, res) => {
+    res.json({
+        message: "Authentication successful!",
+        user: req.user,
+        timestamp: new Date().toISOString()
+    });
+});
+
+/**
  * Get all recipes for a user
  */
 router.get("/recipes/:userName", async (req, res) => {
     const { userName } = req.params;
+    const authenticatedUser = req.user; // From auth middleware
+
+    // Security check: user can only access their own recipes or family members' recipes
+    if (authenticatedUser.email !== userName) {
+        return res.status(403).json({ 
+            error: "Access denied", 
+            message: "You can only access your own recipes" 
+        });
+    }
 
     try {
         // Fetch user information
@@ -56,7 +77,16 @@ router.get("/recipes/:userName", async (req, res) => {
  */
 router.post("/recipes", upload.single("image"), async (req, res) => {
     let { userName, text, url } = req.body;
+    const authenticatedUser = req.user; // From auth middleware
     const chatGPTService = new ChatGPTService();
+
+    // Security check: user can only create recipes for themselves
+    if (authenticatedUser.email !== userName) {
+        return res.status(403).json({ 
+            error: "Access denied", 
+            message: "You can only create recipes for yourself" 
+        });
+    }
 
     if (!userName) {
         return res.status(400).json({ error: "Missing required fields" });
@@ -150,7 +180,16 @@ router.post("/recipes", upload.single("image"), async (req, res) => {
 });
 
 router.post("/updateRecipe", async (req, res) => {
-    let { userName,recipe,docId } = req.body;
+    let { userName, recipe, docId } = req.body;
+    const authenticatedUser = req.user; // From auth middleware
+
+    // Security check: user can only update their own recipes
+    if (authenticatedUser.email !== userName) {
+        return res.status(403).json({ 
+            error: "Access denied", 
+            message: "You can only update your own recipes" 
+        });
+    }
 
     try {
         const document = await CouchbaseService.saveRecipe(userName, recipe, docId);
@@ -197,6 +236,15 @@ router.post("/user", async (req, res) => {
  */
 router.put("/user/family", async (req, res) => {
     const { mainUser, modifiedFamilyMember, allowedToSeeMyRecipes, allowedToSeeTheirRecipes } = req.body;
+    const authenticatedUser = req.user; // From auth middleware
+
+    // Security check: user can only modify their own family settings
+    if (authenticatedUser.email !== mainUser) {
+        return res.status(403).json({ 
+            error: "Access denied", 
+            message: "You can only modify your own family settings" 
+        });
+    }
 
     if (!mainUser || !modifiedFamilyMember || !allowedToSeeMyRecipes || !allowedToSeeTheirRecipes) {
         return res.status(400).json({ error: "Missing required fields" });
@@ -219,6 +267,15 @@ router.put("/user/family", async (req, res) => {
  */
 router.post("/user/deleteFamily", async (req, res) => {
     const { mainUser, modifiedFamilyMember } = req.body;
+    const authenticatedUser = req.user; // From auth middleware
+
+    // Security check: user can only delete their own family members
+    if (authenticatedUser.email !== mainUser) {
+        return res.status(403).json({ 
+            error: "Access denied", 
+            message: "You can only modify your own family settings" 
+        });
+    }
 
     if (!mainUser || !modifiedFamilyMember) {
         return res.status(400).json({ error: "Missing required fields" });
@@ -259,8 +316,23 @@ router.get("/user/:userName", async (req, res) => {
  */
 router.delete("/recipes/:docId", async (req, res) => {
     const { docId } = req.params;
+    const authenticatedUser = req.user; // From auth middleware
 
     try {
+        // First, get the recipe to check ownership
+        const recipe = await CouchbaseService.getRecipeById(docId);
+        if (!recipe) {
+            return res.status(404).json({ error: "Recipe not found" });
+        }
+
+        // Security check: user can only delete their own recipes
+        if (authenticatedUser.email !== recipe.userName) {
+            return res.status(403).json({ 
+                error: "Access denied", 
+                message: "You can only delete your own recipes" 
+            });
+        }
+
         const success = await CouchbaseService.deleteRecipe(docId);
         if (success) {
             res.json({ message: `Recipe deleted successfully: ${docId}` });

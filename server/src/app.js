@@ -4,6 +4,7 @@ const WebhookRoutes = require('./routes/WebhookRoutes');
 const CouchbaseService = require('./config/couchbase');
 const RecipeRoutes = require("./routes/RecipeRoutes");
 const BackupRoutes = require("./routes/BackupRoutes");
+const { authMiddleware } = require('./middleware/auth');
 
 const cors = require("cors");
 const allowedOrigins = ["http://localhost:4000", "https://recipesmyway.uk","https://development.recipesmyway.pages.dev"];
@@ -40,8 +41,8 @@ class App {
 
     initializeRoutes() {
         this.app.use('/webhook', WebhookRoutes);
-        this.app.use("/api", RecipeRoutes);
-        this.app.use("/backup", BackupRoutes);
+        this.app.use("/api", authMiddleware, RecipeRoutes); // Protected with authentication
+        this.app.use("/backup", BackupRoutes); // No authentication needed
     }
 
     async initializeDatabase() {

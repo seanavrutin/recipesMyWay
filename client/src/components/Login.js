@@ -3,13 +3,15 @@ import { GoogleLogin } from "@react-oauth/google";
 import {jwtDecode} from "jwt-decode";
 import { Box, Typography } from "@mui/material";
 import { userAPI } from "../services/api";
+import { authService } from "../services/authService";
 
 const Login = () => {
     const handleLoginSuccess = async (credentialResponse) => {
         try {
             const decoded = jwtDecode(credentialResponse.credential);
             if (decoded.email_verified) {
-                localStorage.setItem("recipesMyWay", JSON.stringify({token:credentialResponse.credential}));
+                // Use auth service to store token
+                authService.setToken(credentialResponse.credential);
                 await checkIfUserExists(decoded);
                 window.location.reload();
             } else {

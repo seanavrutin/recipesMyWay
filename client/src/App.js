@@ -24,8 +24,14 @@ const rtlCache = createCache({
     stylisPlugins: [StylisPluginRTL],
 });
 
-// Replace with your actual Google Client ID
-const GOOGLE_CLIENT_ID = "849943344595-7qlccneee1fmsss4j3p7qa05rl7btrh5.apps.googleusercontent.com";
+// Get Google Client ID from environment variable
+const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID;
+
+// Validate that the environment variable is set
+if (!GOOGLE_CLIENT_ID) {
+    console.error('REACT_APP_GOOGLE_CLIENT_ID is not set in environment variables');
+    throw new Error('Google Client ID is not configured. Please check your environment variables.');
+}
 
 function App() {
     return (

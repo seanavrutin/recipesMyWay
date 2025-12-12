@@ -25,6 +25,7 @@ import CancelIcon from "@mui/icons-material/Cancel";
 import CloseIcon from "@mui/icons-material/Close";
 import { useFontSize } from "../context/FontSizeContext";
 import { userAPI, familyAPI } from "../services/api";
+import { authService } from "../services/authService";
 
 
 const UserMenu = ({ user,setUser, fullscreenMode, setFullscreenMode }) => {
@@ -234,7 +235,7 @@ const UserMenu = ({ user,setUser, fullscreenMode, setFullscreenMode }) => {
                         sx={{ fontSize: "0.875rem", margin: 0 }}
                     />
                 </MenuItem>
-                <MenuItem onClick={() => {localStorage.removeItem("recipesMyWay"); window.location.reload();}} sx={{ justifyContent: "left", minHeight: "5px"}}>
+                <MenuItem onClick={() => {authService.clearAuth(); window.location.reload();}} sx={{ justifyContent: "left", minHeight: "5px"}}>
                     התנתק
                 </MenuItem>
                 {pendingRequests.length > 0 && (

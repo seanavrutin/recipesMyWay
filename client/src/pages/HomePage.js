@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { userAPI, recipeAPI } from "../services/api";
-import {jwtDecode} from "jwt-decode";
+import { authService } from "../services/authService";
 import RecipeCard from "../components/RecipeCard";
 import SearchBar from "../components/SearchBar";
 import FilterBar from "../components/FilterBar";
@@ -14,9 +14,6 @@ import AddRecipe from "../components/AddRecipe";
 import { Snackbar } from "@mui/material";
 import { Dialog } from "@mui/material";
 import MuiAlert from "@mui/material/Alert";
-
-
-
 
 const HomePage = () => {
     const [recipes, setRecipes] = useState([]);
@@ -56,28 +53,25 @@ const HomePage = () => {
     const fetchCalled = useRef(false);
 
     useEffect(() => {
-        const data = JSON.parse(localStorage.getItem("recipesMyWay"));
-        // const data={};
-        // data.token = "eyJhbGciOiJSUzI1NiIsImtpZCI6IjVkMTJhYjc4MmNiNjA5NjI4NWY2OWU0OGFlYTk5MDc5YmI1OWNiODYiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhenAiOiI4NDk5NDMzNDQ1OTUtN3FsY2NuZWVlMWZtc3NzNGozcDdxYTA1cmw3YnRyaDUuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJhdWQiOiI4NDk5NDMzNDQ1OTUtN3FsY2NuZWVlMWZtc3NzNGozcDdxYTA1cmw3YnRyaDUuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJzdWIiOiIxMTA4Mzc0MzkwNzE5NjE4MjEyNzAiLCJlbWFpbCI6InNlYW5hdnJ1dGluQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJuYmYiOjE3Mzk2MzIzODcsIm5hbWUiOiJTZWFuIEF2cnV0aW4iLCJwaWN0dXJlIjoiaHR0cHM6Ly9saDMuZ29vZ2xldXNlcmNvbnRlbnQuY29tL2EvQUNnOG9jSWljanVLUnd5Sk9iS3JvOGdrV3lsZUFXSnMzMXQwcml3X1E0YUQ0T0VwR1JKYk9yTT1zOTYtYyIsImdpdmVuX25hbWUiOiJTZWFuIiwiZmFtaWx5X25hbWUiOiJBdnJ1dGluIiwiaWF0IjoxNzM5NjMyNjg3LCJleHAiOjE3Mzk2MzYyODcsImp0aSI6IjQ2OWNiM2IyYjJiYTRhMjYwYzJkNzBjZmVhZmZjMzY3MTM3ZmQxZDQifQ.U1m3Tknwf-Bk4kS0YQpjuaMJJcXlLs_X-9XeS_Gf_YGI6JIYGzE3da0Lgta1JpUkZp5HwYspNalitHkGojK_s0xToSjfYaDStv0Gf-2tSZ_9oaapGE2OdMEIKMIcLJrnBrtEdLSFOAvkOGTjNz0TGa8WU2DkvOyKBmcQq7rlmIVmZbJn2rN61issCbPzlJZ-lBy-K7LS3uFfIrhr7f3VZRezn5reP3DwJ1aCOhso9tL5-Nt5QltXNv6-8l9mP6X9sX0H-HYsWEbm7KbVQXTk5n1ZApNI_CmHo8tGombHUKfs_4q1pVCXd-1izxc58FJBy1y28aihJgx8Kad9-sulgg";
-        
         // Load fullscreen preference
+        const data = JSON.parse(localStorage.getItem("recipesMyWay") || "{}");
         if (data?.fullscreenMode !== undefined) {
             setFullscreenMode(data.fullscreenMode);
         }
 
-        if (data?.token) {
+        // Check authentication using the auth service
+        if (authService.isAuthenticated()) {
             try {
-                const decoded = jwtDecode(data.token);
-                if (decoded.email_verified) {
-                    fetchUser(decoded);
-                } 
-                else {
+                const userInfo = authService.getUserInfo();
+                if (userInfo && userInfo.email_verified) {
+                    fetchUser(userInfo);
+                } else {
                     console.warn("Email not verified");
-                    localStorage.removeItem("recipesMyWay");
+                    authService.clearAuth();
                 }
             } catch (error) {
                 console.error("Failed to decode token:", error);
-                localStorage.removeItem("recipesMyWay");
+                authService.clearAuth();
             }
         }
     }, []);
