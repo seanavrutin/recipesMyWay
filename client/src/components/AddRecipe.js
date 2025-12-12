@@ -39,6 +39,7 @@ const AddRecipe = ({ user,onRecipeAdded }) => {
     const [finishedLoading, setFinishedLoading] = useState(false);
     const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
+    const [savedRecipeName, setSavedRecipeName] = useState('');
     const [imageFile, setImageFile] = useState(null);
     const [selectedInputMethod, setSelectedInputMethod] = useState("text");
     const [linkUrl, setLinkUrl] = useState(null);
@@ -88,6 +89,7 @@ const AddRecipe = ({ user,onRecipeAdded }) => {
             let response = await recipeAPI.createRecipe(formData);
             
             onRecipeAdded(response);
+            setSavedRecipeName(response.recipe?.title || '');
             setLoading(false);
             setSuccess(true);
             setSnackbarOpen(true);
@@ -110,7 +112,7 @@ const AddRecipe = ({ user,onRecipeAdded }) => {
         <Box>
             <Snackbar open={snackbarOpen} autoHideDuration={3000} onClose={() => setSnackbarOpen(false)}>
                 <MuiAlert onClose={() => setSnackbarOpen(false)} severity="success" sx={{ width: '100%' }}>
-                    המתכון נוצר בהצלחה
+                    {savedRecipeName ? `המתכון "${savedRecipeName}" נשמר בהצלחה` : 'המתכון נשמר בהצלחה'}
                 </MuiAlert>
             </Snackbar>
             {/* "+" Button to open menu */}

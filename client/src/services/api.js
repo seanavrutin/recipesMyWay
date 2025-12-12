@@ -6,7 +6,7 @@ const SERVER = process.env.REACT_APP_SERVER_ADDRESS;
 // Create axios instance with base configuration
 const api = axios.create({
     baseURL: SERVER,
-    timeout: 10000,
+    timeout: 60000,
     headers: {
         'Content-Type': 'application/json',
     },
