@@ -79,7 +79,7 @@ const AddRecipe = ({ user,onRecipeAdded }) => {
             if(linkUrl && selectedInputMethod == "link"){
                 formData.append("url", linkUrl);
             }
-            if(linkUrl && selectedInputMethod == "instagram"){
+            if(linkInstagram && selectedInputMethod == "instagram"){
                 formData.append("url", linkInstagram);
             }
             if (imageFile && selectedInputMethod == "image") {
