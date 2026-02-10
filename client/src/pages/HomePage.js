@@ -27,6 +27,7 @@ const HomePage = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [user, setUser] = useState(null); // Decoded user from localStorage
+    const [isCheckingAuth, setIsCheckingAuth] = useState(true);
     const [sortType, setSortType] = useState("alphabet"); // "alphabet" or "category"
     const [sortDirection, setSortDirection] = useState("asc"); // "asc" or "desc"
 
@@ -69,16 +70,20 @@ const HomePage = () => {
             try {
                 const decoded = jwtDecode(data.token);
                 if (decoded.email_verified) {
-                    fetchUser(decoded);
+                    fetchUser(decoded).finally(() => setIsCheckingAuth(false));
                 } 
                 else {
                     console.warn("Email not verified");
                     localStorage.removeItem("recipesMyWay");
+                    setIsCheckingAuth(false);
                 }
             } catch (error) {
                 console.error("Failed to decode token:", error);
                 localStorage.removeItem("recipesMyWay");
+                setIsCheckingAuth(false);
             }
+        } else {
+            setIsCheckingAuth(false);
         }
     }, []);
 
@@ -261,6 +266,14 @@ const HomePage = () => {
       };
       
     
+
+    if (isCheckingAuth) {
+        return (
+            <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
+                <CircularProgress />
+            </Box>
+        );
+    }
 
     if (!user) {
         return (
