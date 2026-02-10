@@ -36,7 +36,7 @@ const HomePage = () => {
     const [snackbarMessage, setSnackbarMessage] = useState('');
     const [snackbarSeverity, setSnackbarSeverity] = useState('success');
     const [deleteTargetId, setDeleteTargetId] = useState(null);
-    const [fullscreenMode, setFullscreenMode] = useState(false);
+    const [fullscreenMode, setFullscreenMode] = useState(true);
 
     // Function to save fullscreen preference to localStorage
     const saveFullscreenPreference = (preference) => {
