@@ -1,2 +1,6 @@
 node_modules
 npm-debug.log
+
+# Credentials are mounted at runtime, never baked into the image
+firebase-service-account.json
+recipesmyway-*-firebase-adminsdk-*.json

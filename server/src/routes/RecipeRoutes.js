@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const CouchbaseService = require("../config/couchbase");
+const FirestoreService = require("../config/firestore");
 const ChatGPTService = require("../services/ChatGPTService");
 const RecipeUtils = require("../utils/RecipeUtils");
 const cheerio = require('cheerio');
@@ -12,9 +12,9 @@ const upload = multer({ storage });
 
 
 
-// Ensure Couchbase is connected
+// Ensure Firestore is connected
 (async () => {
-    await CouchbaseService.connect();
+    await FirestoreService.connect();
 })();
 
 /**
@@ -25,7 +25,7 @@ router.get("/recipes/:userName", async (req, res) => {
 
     try {
         // Fetch user information
-        const userData = await CouchbaseService.getUserInfo(userName);
+        const userData = await FirestoreService.getUserInfo(userName);
         if (!userData) {
             return res.status(404).json({ error: "User not found" });
         }
@@ -42,7 +42,7 @@ router.get("/recipes/:userName", async (req, res) => {
         // Fetch all recipes for the user and their allowed family members
         let allRecipesDocs = [];
         for (const name of userNames) {
-            const recipeDocs = await CouchbaseService.getRecipesByUser(name);
+            const recipeDocs = await FirestoreService.getRecipesByUser(name);
             allRecipesDocs = allRecipesDocs.concat(recipeDocs);
         }
         res.json(allRecipesDocs);
@@ -138,7 +138,7 @@ router.post("/recipes", upload.single("image"), async (req, res) => {
             return;
         }
 
-        const document = await CouchbaseService.saveRecipe(userName, formattedRecipe,undefined);
+        const document = await FirestoreService.saveRecipe(userName, formattedRecipe,undefined);
         if (document) {
             res.json(document);
         } else {
@@ -153,7 +153,7 @@ router.post("/updateRecipe", async (req, res) => {
     let { userName,recipe,docId } = req.body;
 
     try {
-        const document = await CouchbaseService.saveRecipe(userName, recipe, docId);
+        const document = await FirestoreService.saveRecipe(userName, recipe, docId);
         if (document) {
             res.json(document);
         } else {
@@ -181,7 +181,7 @@ router.post("/user", async (req, res) => {
             translatedNames = { given_name, family_name }; // Use input names if translation fails
         }
 
-        const doc = await CouchbaseService.addUser(userName, translatedNames.given_name, translatedNames.family_name);
+        const doc = await FirestoreService.addUser(userName, translatedNames.given_name, translatedNames.family_name);
         if (doc) {
             res.json(doc);
         } else {
@@ -203,7 +203,7 @@ router.put("/user/family", async (req, res) => {
     }
 
     try {
-        const updatedUser = await CouchbaseService.modifyFamilyMember(mainUser, modifiedFamilyMember, allowedToSeeMyRecipes, allowedToSeeTheirRecipes);
+        const updatedUser = await FirestoreService.modifyFamilyMember(mainUser, modifiedFamilyMember, allowedToSeeMyRecipes, allowedToSeeTheirRecipes);
         if (updatedUser) {
             res.json({ message: "Family member updated successfully", user: updatedUser });
         } else {
@@ -225,7 +225,7 @@ router.post("/user/deleteFamily", async (req, res) => {
     }
 
     try {
-        const updatedUser = await CouchbaseService.removeFamilyMember(mainUser, modifiedFamilyMember);
+        const updatedUser = await FirestoreService.removeFamilyMember(mainUser, modifiedFamilyMember);
         if (updatedUser) {
             res.json({ message: "Family member removed successfully", user: updatedUser });
         } else {
@@ -243,7 +243,7 @@ router.get("/user/:userName", async (req, res) => {
     const { userName } = req.params;
 
     try {
-        const userInfo = await CouchbaseService.getUserInfo(userName);
+        const userInfo = await FirestoreService.getUserInfo(userName);
         if (userInfo) {
             res.json(userInfo);
         } else {
@@ -261,7 +261,7 @@ router.delete("/recipes/:docId", async (req, res) => {
     const { docId } = req.params;
 
     try {
-        const success = await CouchbaseService.deleteRecipe(docId);
+        const success = await FirestoreService.deleteRecipe(docId);
         if (success) {
             res.json({ message: `Recipe deleted successfully: ${docId}` });
         } else {

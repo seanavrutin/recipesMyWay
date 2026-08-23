@@ -8,6 +8,8 @@ services:
     restart: always
     environment:
       - NODE_ENV=production
-      - COUCHBASE_HOST=10.100.102.15
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/secrets/firebase-service-account.json
+    volumes:
+      - ./server/firebase-service-account.json:/app/secrets/firebase-service-account.json:ro
     ports:
       - "3000:3000"

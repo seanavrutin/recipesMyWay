@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const WebhookRoutes = require('./routes/WebhookRoutes');
-const CouchbaseService = require('./config/couchbase');
+const FirestoreService = require('./config/firestore');
 const RecipeRoutes = require("./routes/RecipeRoutes");
 const BackupRoutes = require("./routes/BackupRoutes");
 
@@ -56,7 +56,7 @@ class App {
     }
 
     async initializeDatabase() {
-        await CouchbaseService.connect();
+        await FirestoreService.connect();
     }
 
     listen() {

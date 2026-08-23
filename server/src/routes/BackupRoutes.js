@@ -1,5 +1,5 @@
 const express = require("express");
-const CouchbaseService = require("../config/couchbase");
+const FirestoreService = require("../config/firestore");
 const ZippingService = require("../services/ZippingService");
 const GoogleDriveService = require("../services/GoogleDriveService");
 
@@ -10,14 +10,14 @@ router.get("/backup", async (req, res) => {
     try {
         console.log("Starting virtual backup process...");
 
-        // Step 1: Fetch all documents from Couchbase
-        const documents = await CouchbaseService.fetchAllDocuments();
+        // Step 1: Fetch all documents from Firestore
+        const documents = await FirestoreService.fetchAllDocuments();
 
         // Step 2: Create a ZIP stream
         const zipStream = ZippingService.createZipStream(documents);
 
         // Step 3: Upload the ZIP stream to Google Drive
-        const fileName = `Couchbase_Backup_${new Date().toISOString().split("T")[0]}.zip`;
+        const fileName = `Firestore_Backup_${new Date().toISOString().split("T")[0]}.zip`;
         await GoogleDriveService.uploadStream(zipStream, BACKUP_FOLDER_ID, fileName);
 
         console.log("Backup completed successfully!");

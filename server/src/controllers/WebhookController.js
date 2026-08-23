@@ -1,6 +1,6 @@
 const WhatsAppService = require('../services/WhatsAppService');
 const ChatGPTService = require('../services/ChatGPTService');
-const CouchbaseService = require("../config/couchbase");
+const FirestoreService = require("../config/firestore");
 const axios = require('axios');
 const cheerio = require('cheerio');
 
@@ -41,7 +41,7 @@ class WebhookController {
 
             const formattedRecipe = await this.chatGPTService.formatRecipe(text);
 
-            const docId = await CouchbaseService.saveRecipe(from, formattedRecipe);
+            const docId = await FirestoreService.saveRecipe(from, formattedRecipe);
 
             if (docId) {
                 await this.whatsAppService.sendMessage(from, this.formatRecipeForWhatsApp(formattedRecipe));

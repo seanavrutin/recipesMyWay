@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "couchbase": "^4.6.1",
+    "firebase-admin": "^13.7.0"
+  }
+}

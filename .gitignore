@@ -1,6 +1,8 @@
 # Node.js dependencies
+/node_modules
 /server/node_modules
 /client/node_modules
+/functions/node_modules
 
 # Build files
 /server/build
@@ -9,3 +11,10 @@
 # Environment variables
 *.env
 /server/credentials.json
+firebase-service-account.json
+recipesmyway-93aa2-firebase-adminsdk-*.json
+
+# Firebase
+firebase-debug.log
+firebase-debug.*.log
+.firebase/
