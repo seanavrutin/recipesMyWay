@@ -6,7 +6,17 @@ const RecipeRoutes = require("./routes/RecipeRoutes");
 const BackupRoutes = require("./routes/BackupRoutes");
 
 const cors = require("cors");
-const allowedOrigins = ["http://localhost:4000", "https://recipesmyway.uk","https://development.recipesmyway.pages.dev"];
+const defaultAllowedOrigins = [
+    "http://localhost:4000",
+    "https://recipesmyway.uk",
+    "https://development.recipesmyway.pages.dev",
+    "https://recipes.avrux.uk"
+];
+// CORS_ALLOWED_ORIGINS is a comma-separated list that extends the defaults without a code change.
+const allowedOrigins = [
+    ...defaultAllowedOrigins,
+    ...(process.env.CORS_ALLOWED_ORIGINS || "").split(",").map((o) => o.trim()).filter(Boolean)
+];
 
 
 
@@ -29,7 +39,8 @@ class App {
                         // Allow all IPs in the 10.100.102.x range
                         callback(null, true);
                     } else {
-                        callback(new Error("Not allowed by CORS"));
+                        console.warn(`Blocked CORS request from origin: ${origin}`);
+                        callback(null, false);
                     }
                 },
             })
