@@ -1,5 +1,7 @@
 const admin = require("firebase-admin");
 const crypto = require("crypto");
+const { AppError } = require("../utils/AppError");
+const { logger } = require("../utils/Logger");
 
 const RECIPES_COLLECTION = "recipes";
 const USERS_COLLECTION = "users";
@@ -17,20 +19,42 @@ class FirestoreService {
         }
 
         try {
+            // Named to avoid the logger's secret-key redaction, which would mask a plain
+            // description of which mechanism was used.
+            let authMethod;
             if (!admin.apps.length) {
                 const rawServiceAccount = process.env.FIREBASE_SERVICE_ACCOUNT;
                 if (rawServiceAccount) {
+                    authMethod = "FIREBASE_SERVICE_ACCOUNT env var";
                     admin.initializeApp({ credential: admin.credential.cert(JSON.parse(rawServiceAccount)) });
                 } else {
+                    authMethod = process.env.GOOGLE_APPLICATION_CREDENTIALS
+                        ? `key file at ${process.env.GOOGLE_APPLICATION_CREDENTIALS}`
+                        : "application default credentials";
                     admin.initializeApp({ credential: admin.credential.applicationDefault() });
                 }
+            } else {
+                authMethod = "already initialised";
             }
             this._db = admin.firestore();
             // Couchbase dropped undefined fields on serialize; Firestore throws on them instead.
             this._db.settings({ ignoreUndefinedProperties: true });
-            console.log("Firestore connected");
+
+            logger.info("Firestore connected", {
+                authMethod,
+                projectId: admin.app().options?.projectId || process.env.GOOGLE_CLOUD_PROJECT || "resolved from credentials"
+            });
         } catch (error) {
-            console.error("Firestore connection failed:", error);
+            // Must throw rather than leave _db null, otherwise the next query fails with an
+            // unrelated "cannot read property collection of null" far from the real cause.
+            throw new AppError("DB_UNAVAILABLE", {
+                message: `Firestore initialisation failed: ${error.message}`,
+                cause: error,
+                details: {
+                    hasServiceAccountEnv: Boolean(process.env.FIREBASE_SERVICE_ACCOUNT),
+                    hasCredentialsPath: Boolean(process.env.GOOGLE_APPLICATION_CREDENTIALS)
+                }
+            });
         }
 
         return this._db;
@@ -41,30 +65,38 @@ class FirestoreService {
     }
 
     async saveRecipe(userName, recipeJson, docId) {
-        try {
-            if (!recipeJson.title) {
-                throw new Error("No title found in recipe JSON");
-            }
-            if (!docId) {
-                const uuid = crypto.randomUUID();
-                docId = `Recipe_${userName}_${uuid}`;
-            }
-            const document = {
-                recipe: recipeJson,
-                userName: userName,
-                id: docId
-            };
-            await this.db.collection(RECIPES_COLLECTION).doc(docId).set(document);
+        if (!recipeJson?.title) {
+            throw new AppError("RECIPE_INCOMPLETE", {
+                message: "Refusing to save a recipe with no title",
+                details: { userName, docId, receivedKeys: Object.keys(recipeJson || {}) }
+            });
+        }
 
+        const id = docId || `Recipe_${userName}_${crypto.randomUUID()}`;
+        const document = { recipe: recipeJson, userName, id };
+
+        try {
+            await this.db.collection(RECIPES_COLLECTION).doc(id).set(document);
             return document;
         } catch (error) {
-            console.error("Error saving recipe:", error);
-            return null;
+            throw new AppError("DB_WRITE_FAILED", {
+                message: `Failed to save recipe: ${error.message}`,
+                cause: error,
+                details: { userName, docId: id, isUpdate: Boolean(docId), grpcCode: error.code }
+            });
         }
     }
 
     async saveReadyDoc(docId, json) {
-        await this.db.collection(RECIPES_COLLECTION).doc(docId).set(json);
+        try {
+            await this.db.collection(RECIPES_COLLECTION).doc(docId).set(json);
+        } catch (error) {
+            throw new AppError("DB_WRITE_FAILED", {
+                message: `Failed to save document ${docId}: ${error.message}`,
+                cause: error,
+                details: { docId, grpcCode: error.code }
+            });
+        }
     }
 
     // Couchbase matched on the document id prefix; Firestore matches the userName field instead,
@@ -72,13 +104,13 @@ class FirestoreService {
     async getRecipesByUser(userName) {
         try {
             const snapshot = await this.db.collection(RECIPES_COLLECTION).where("userName", "==", userName).get();
-            return snapshot.docs.map((doc) => ({
-                id: doc.id,
-                ...doc.data()
-            }));
+            return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
         } catch (error) {
-            console.error("Error fetching recipes for user:", error);
-            return [];
+            throw new AppError("DB_READ_FAILED", {
+                message: `Failed to fetch recipes for ${userName}: ${error.message}`,
+                cause: error,
+                details: { userName, collection: RECIPES_COLLECTION, grpcCode: error.code }
+            });
         }
     }
 
@@ -87,81 +119,87 @@ class FirestoreService {
             await this.db.collection(RECIPES_COLLECTION).doc(docId).delete();
             return true;
         } catch (error) {
-            console.error("Error deleting recipe:", error);
-            return false;
+            throw new AppError("DB_WRITE_FAILED", {
+                message: `Failed to delete recipe ${docId}: ${error.message}`,
+                cause: error,
+                details: { docId, grpcCode: error.code }
+            });
         }
     }
 
+    /** Returns null when the user does not exist; throws when the read itself fails. */
     async getUserInfo(userName) {
+        const docId = `User_${userName}`;
         try {
-            const docId = `User_${userName}`;
             const doc = await this.db.collection(USERS_COLLECTION).doc(docId).get();
-            if (!doc.exists) {
-                return null;
-            }
-            return doc.data();
+            return doc.exists ? doc.data() : null;
         } catch (error) {
-            console.error("Error fetching user info:", error);
-            return null;
+            throw new AppError("DB_READ_FAILED", {
+                message: `Failed to fetch user ${userName}: ${error.message}`,
+                cause: error,
+                details: { userName, docId, grpcCode: error.code }
+            });
         }
     }
 
     async addUser(userName, given_name, family_name) {
+        const docId = `User_${userName}`;
+        const userDoc = { given_name, family_name, familyMembers: [] };
+
         try {
-            const docId = `User_${userName}`;
-            const userDoc = {
-                given_name: given_name,
-                family_name: family_name,
-                familyMembers: []
-            };
             await this.db.collection(USERS_COLLECTION).doc(docId).set(userDoc);
             return userDoc;
         } catch (error) {
-            console.error("Error adding user:", error);
-            return null;
+            throw new AppError("DB_WRITE_FAILED", {
+                message: `Failed to add user ${userName}: ${error.message}`,
+                cause: error,
+                details: { userName, docId, grpcCode: error.code }
+            });
         }
     }
 
     async modifyFamilyMember(mainUser, modifiedFamilyMember, allowedToSeeMyRecipes, allowedToSeeTheirRecipes) {
+        const docId = `User_${mainUser}`;
         try {
-            const docId = `User_${mainUser}`;
             const doc = await this.db.collection(USERS_COLLECTION).doc(docId).get();
             if (!doc.exists) {
                 return null;
             }
             const userData = doc.data();
 
-            let familyMembers = userData.familyMembers || [];
-            const index = familyMembers.findIndex(member => member.memberName === modifiedFamilyMember);
+            const familyMembers = userData.familyMembers || [];
+            const index = familyMembers.findIndex((member) => member.memberName === modifiedFamilyMember);
 
             if (index !== -1) {
                 familyMembers[index].allowedToSeeMyRecipes = allowedToSeeMyRecipes;
                 familyMembers[index].allowedToSeeTheirRecipes = allowedToSeeTheirRecipes;
             } else {
-                familyMembers.push({ memberName: modifiedFamilyMember, allowedToSeeMyRecipes: allowedToSeeMyRecipes, allowedToSeeTheirRecipes: allowedToSeeTheirRecipes });
+                familyMembers.push({ memberName: modifiedFamilyMember, allowedToSeeMyRecipes, allowedToSeeTheirRecipes });
             }
 
             userData.familyMembers = familyMembers;
             await this.db.collection(USERS_COLLECTION).doc(docId).set(userData);
             return userData;
         } catch (error) {
-            console.error("Error modifying family member:", error);
-            return null;
+            throw new AppError("DB_WRITE_FAILED", {
+                message: `Failed to modify family member for ${mainUser}: ${error.message}`,
+                cause: error,
+                details: { mainUser, modifiedFamilyMember, docId, grpcCode: error.code }
+            });
         }
     }
 
     async removeFamilyMember(mainUser, modifiedFamilyMember) {
+        const docId = `User_${mainUser}`;
         try {
-            const docId = `User_${mainUser}`;
             const doc = await this.db.collection(USERS_COLLECTION).doc(docId).get();
             if (!doc.exists) {
                 return null;
             }
             const userData = doc.data();
 
-            let familyMembers = userData.familyMembers || [];
-            const index = familyMembers.findIndex(member => member.memberName === modifiedFamilyMember);
-
+            const familyMembers = userData.familyMembers || [];
+            const index = familyMembers.findIndex((member) => member.memberName === modifiedFamilyMember);
             if (index !== -1) {
                 familyMembers.splice(index, 1);
             }
@@ -170,8 +208,11 @@ class FirestoreService {
             await this.db.collection(USERS_COLLECTION).doc(docId).set(userData);
             return userData;
         } catch (error) {
-            console.error("Error modifying family member:", error);
-            return null;
+            throw new AppError("DB_WRITE_FAILED", {
+                message: `Failed to remove family member for ${mainUser}: ${error.message}`,
+                cause: error,
+                details: { mainUser, modifiedFamilyMember, docId, grpcCode: error.code }
+            });
         }
     }
 
@@ -186,10 +227,17 @@ class FirestoreService {
             recipesSnapshot.docs.forEach((doc) => documents.push({ id: doc.id, ...doc.data() }));
             usersSnapshot.docs.forEach((doc) => documents.push({ id: doc.id, ...doc.data() }));
 
+            logger.debug("Fetched all documents for backup", {
+                recipeCount: recipesSnapshot.size,
+                userCount: usersSnapshot.size
+            });
             return documents;
         } catch (error) {
-            console.error("Error fetching documents from Firestore:", error);
-            throw error;
+            throw new AppError("DB_READ_FAILED", {
+                message: `Failed to fetch all documents: ${error.message}`,
+                cause: error,
+                details: { grpcCode: error.code }
+            });
         }
     }
 }

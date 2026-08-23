@@ -39,6 +39,7 @@ const AddRecipe = ({ user,onRecipeAdded }) => {
     const [finishedLoading, setFinishedLoading] = useState(false);
     const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
+    const [errorId, setErrorId] = useState('');
     const [savedRecipeName, setSavedRecipeName] = useState('');
     const [imageFile, setImageFile] = useState(null);
     const [selectedInputMethod, setSelectedInputMethod] = useState("text");
@@ -64,6 +65,8 @@ const AddRecipe = ({ user,onRecipeAdded }) => {
         setLoading(false);
         setSuccess(false);
         setFinishedLoading(false);
+        setErrorMessage('');
+        setErrorId('');
     };
 
     const handleCreate = async () => {
@@ -98,10 +101,17 @@ const AddRecipe = ({ user,onRecipeAdded }) => {
             // Cache is automatically cleared in the API service
         }
         catch(error){
-            if(error?.response?.data?.error){
-                setErrorMessage(error.response.data.error);
+            const data = error?.response?.data;
+            if(data?.error){
+                setErrorMessage(data.error);
             }
-            console.log(error);
+            setErrorId(data?.errorId || error?.response?.headers?.['x-request-id'] || '');
+            console.error('Failed to create recipe', {
+                code: data?.code,
+                errorId: data?.errorId,
+                status: error?.response?.status,
+                message: data?.error || error?.message
+            });
             setLoading(false);
             setSuccess(false);
             setFinishedLoading(true);
@@ -307,6 +317,11 @@ const AddRecipe = ({ user,onRecipeAdded }) => {
                             <Typography variant="body2" sx={{ fontWeight: "bold", marginTop: 1, color: "red" }}>
                             {errorMessage !== '' ? errorMessage : 'תקלה בשמירת המתכון, נסה שוב'}
                             </Typography>
+                            {errorId !== '' && (
+                                <Typography variant="caption" sx={{ marginTop: 0.5, color: "#999" }}>
+                                    {`קוד תקלה: ${errorId}`}
+                                </Typography>
+                            )}
                         </Box>
                     )}
                 </Box>

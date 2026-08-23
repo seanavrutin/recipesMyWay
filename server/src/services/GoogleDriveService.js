@@ -1,36 +1,41 @@
 const { google } = require("googleapis");
+const { AppError } = require("../utils/AppError");
+const { logger: rootLogger } = require("../utils/Logger");
+
+const CREDENTIALS_PATH = process.env.GOOGLE_DRIVE_CREDENTIALS_PATH || "./credentials.json";
 
 class GoogleDriveService {
     constructor() {
         this.auth = new google.auth.GoogleAuth({
-            keyFile: "./credentials.json", // Ensure credentials file path is correct
-            scopes: ["https://www.googleapis.com/auth/drive.file"],
+            keyFile: CREDENTIALS_PATH,
+            scopes: ["https://www.googleapis.com/auth/drive.file"]
         });
         this.drive = google.drive({ version: "v3", auth: this.auth });
     }
 
-    async uploadStream(stream, folderId, fileName) {
+    async uploadStream(stream, folderId, fileName, logger = rootLogger) {
         try {
-            const fileMetadata = {
-                name: fileName, // Name of the file in Google Drive
-                parents: ["1IUa5JpZ9_wvzD2KoamF10lGfH8uMPH7s"], 
-            };
-            const media = {
-                mimeType: "application/zip",
-                body: stream, // Use the virtual stream as the body
-            };
-
             const response = await this.drive.files.create({
-                resource: fileMetadata,
-                media: media,
-                fields: "id",
+                requestBody: { name: fileName, parents: [folderId] },
+                media: { mimeType: "application/zip", body: stream },
+                fields: "id"
             });
 
-            console.log(`File uploaded to Google Drive with ID: ${response.data.id}`);
+            logger.info("Uploaded backup to Google Drive", { fileName, fileId: response.data.id, folderId });
             return response.data.id;
         } catch (error) {
-            console.error("Error uploading to Google Drive:", error);
-            throw error;
+            const apiError = error.response?.data?.error;
+            throw new AppError("BACKUP_FAILED", {
+                message: `Google Drive upload failed: ${apiError?.message || error.message}`,
+                cause: error,
+                details: {
+                    fileName,
+                    folderId,
+                    credentialsPath: CREDENTIALS_PATH,
+                    status: error.response?.status,
+                    reason: apiError?.errors?.[0]?.reason
+                }
+            });
         }
     }
 }

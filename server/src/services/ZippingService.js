@@ -1,23 +1,32 @@
 const archiver = require("archiver");
 const { PassThrough } = require("stream");
+const { logger: rootLogger } = require("../utils/Logger");
 
 class ZippingService {
-    static createZipStream(documents) {
-        const archive = archiver("zip", { zlib: { level: 9 } }); // Create an archiver instance
-        const stream = new PassThrough(); // Create a virtual stream
+    static createZipStream(documents, logger = rootLogger) {
+        const archive = archiver("zip", { zlib: { level: 9 } });
+        const stream = new PassThrough();
 
-        archive.pipe(stream); // Pipe archiver data to the virtual stream
-
-        // Add each document as a separate JSON file
-        documents.forEach((doc) => {
-            const fileName = `${doc.id}.json`; // Use the document ID as the file name
-            const content = JSON.stringify(doc, null, 2); // Pretty-print the JSON
-            archive.append(content, { name: fileName }); // Add the file to the archive
+        // An archiver error is emitted asynchronously, so without a listener it would surface as an
+        // unhandled 'error' event and take the process down mid-backup.
+        archive.on("error", (error) => {
+            logger.error("Failed while building the backup archive", { error, documentCount: documents.length });
+            stream.destroy(error);
+        });
+        archive.on("warning", (warning) => {
+            logger.warn("Archive warning while building the backup", { error: warning });
         });
 
-        archive.finalize(); // Finalize the archive (finish adding files)
+        archive.pipe(stream);
 
-        return stream; // Return the stream for further use
+        documents.forEach((doc) => {
+            archive.append(JSON.stringify(doc, null, 2), { name: `${doc.id}.json` });
+        });
+
+        archive.finalize();
+        logger.debug("Backup archive stream created", { documentCount: documents.length });
+
+        return stream;
     }
 }
 

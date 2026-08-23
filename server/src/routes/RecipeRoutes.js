@@ -1,276 +1,230 @@
 const express = require("express");
 const router = express.Router();
 const FirestoreService = require("../config/firestore");
-const ChatGPTService = require("../services/ChatGPTService");
-const RecipeUtils = require("../utils/RecipeUtils");
-const cheerio = require('cheerio');
-const axios = require('axios');
+const GeminiService = require("../services/GeminiService");
+const RecipePageScraper = require("../services/RecipePageScraper");
+const { AppError } = require("../utils/AppError");
+const { asyncRoute } = require("../utils/routeHelpers");
 const multer = require("multer");
 const sharp = require("sharp");
-const storage = multer.memoryStorage();
-const upload = multer({ storage });
 
-
-
-// Ensure Firestore is connected
-(async () => {
-    await FirestoreService.connect();
-})();
+const MAX_IMAGE_BYTES = Number(process.env.MAX_IMAGE_BYTES || 15 * 1024 * 1024);
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_IMAGE_BYTES } });
 
 /**
- * Get all recipes for a user
+ * Get all recipes visible to a user: their own, plus those of family members who shared with them.
  */
-router.get("/recipes/:userName", async (req, res) => {
+router.get("/recipes/:userName", asyncRoute(async (req, res) => {
     const { userName } = req.params;
 
-    try {
-        // Fetch user information
-        const userData = await FirestoreService.getUserInfo(userName);
-        if (!userData) {
-            return res.status(404).json({ error: "User not found" });
-        }
-
-        // Collect all usernames that should be included in the recipe search
-        const userNames = [userName];
-        if (userData.familyMembers) {
-            userData.familyMembers.forEach(member => {
-                if (member.allowedToSeeTheirRecipes) {
-                    userNames.push(member.memberName);
-                }
-            });
-        }
-        // Fetch all recipes for the user and their allowed family members
-        let allRecipesDocs = [];
-        for (const name of userNames) {
-            const recipeDocs = await FirestoreService.getRecipesByUser(name);
-            allRecipesDocs = allRecipesDocs.concat(recipeDocs);
-        }
-        res.json(allRecipesDocs);
-    } catch (error) {
-        res.status(500).json({ error: "Failed to fetch recipes" });
+    const userData = await FirestoreService.getUserInfo(userName);
+    if (!userData) {
+        throw new AppError("USER_NOT_FOUND", { details: { userName } });
     }
-});
+
+    const userNames = [userName];
+    if (userData.familyMembers) {
+        userData.familyMembers.forEach((member) => {
+            if (member.allowedToSeeTheirRecipes) {
+                userNames.push(member.memberName);
+            }
+        });
+    }
+
+    let allRecipesDocs = [];
+    for (const name of userNames) {
+        const recipeDocs = await FirestoreService.getRecipesByUser(name);
+        allRecipesDocs = allRecipesDocs.concat(recipeDocs);
+    }
+
+    req.log.info("Served recipe list", {
+        userName,
+        sourceUserCount: userNames.length,
+        recipeCount: allRecipesDocs.length
+    });
+    res.json(allRecipesDocs);
+}));
 
 /**
- * Save a recipe
+ * Create a recipe from free text, a URL, an uploaded image, or any combination of the three.
  */
-router.post("/recipes", upload.single("image"), async (req, res) => {
-    let { userName, text, url } = req.body;
-    const chatGPTService = new ChatGPTService();
+router.post("/recipes", upload.single("image"), asyncRoute(async (req, res) => {
+    const { userName, text, url } = req.body;
 
     if (!userName) {
-        return res.status(400).json({ error: "Missing required fields" });
-    }
-    let imageUrl;
-    let urlData;
-    if(req.file){
-        const resizedBuffer = await sharp(req.file.buffer)
-        .resize({ width: 800 })
-        .jpeg({ quality: 80 })
-        .toBuffer();
-        const base64 = resizedBuffer.toString("base64");
-        imageUrl = `data:image/jpeg;base64,${base64}`;
+        throw new AppError("VALIDATION_FAILED", {
+            message: "userName is required to create a recipe",
+            details: { missingFields: ["userName"] }
+        });
     }
 
-    try {
-        if(url){
-            const { data } = await axios.get(url);
-            if (data.includes('_Incapsula_Resource') || data.includes('Incapsula') || data.includes('Request unsuccessful')) {
-                res.status(400).json({ error: "האתר חסום בפני תוכנות אוטומטיות, ולא ניתן לטעון את המתכון ממנו. נסו אתר אחר או העתיקו את המתכון ידנית." });
-                return;
-            }
+    req.log.info("Creating recipe", {
+        userName,
+        hasText: Boolean(text),
+        hasUrl: Boolean(url),
+        hasImage: Boolean(req.file),
+        url
+    });
 
-            const $ = cheerio.load(data);
-            
-            // Remove likely comment sections
-            $([
-              '[id*="comment"]',
-              '[class*="comment"]',
-              '[id*="respond"]',
-              '[class*="respond"]',
-              '[id*="reply"]',
-              '[class*="reply"]',
-              '[id*="discussion"]',
-              '[class*="discussion"]',
-              '[id*="reviews"]',
-              '[class*="reviews"]',
-              '[id*="feedback"]',
-              '[class*="feedback"]',
-              'section.comments',
-              'div.comments',
-              'ul.comments',
-              'ol.comments',
-              'aside.comments'
-            ].join(',')).remove();
-          
-            // Optionally also remove footer, sidebar, etc.
-            $('footer, nav, aside, script, style').remove();
-          
-            if(url.includes("instagram")){
-                urlData = $('meta[name="description"]').attr('content');
-            }
-            else{
-                urlData = $("body").text();     
-            }  
-        }
-    }
-    catch(error){
-        res.status(400).json({ error: "האתר חסום בפני תוכנות אוטומטיות, ולא ניתן לטעון את המתכון ממנו. נסו אתר אחר או העתיקו את המתכון ידנית." });
-        return;
-    }
-    try{
-        let chatInput = '';
-        if(text && urlData){
-            chatInput = "המלל הוא: "+text+" והקישור הוא: "+ urlData;
-        }
-        else if(text && !urlData){
-            chatInput = text;
-        }
-        else if(!text && urlData){
-            chatInput = urlData;
-        }
-        const formattedRecipe = await chatGPTService.formatRecipe(chatInput,imageUrl);
-        if(url){
-            formattedRecipe.url=url;
-        }
-        if(formattedRecipe.error){
-            res.status(500).json(formattedRecipe);
-            return;
-        }
+    const image = req.file ? await prepareImage(req.file, req.log) : undefined;
 
-        const document = await FirestoreService.saveRecipe(userName, formattedRecipe,undefined);
-        if (document) {
-            res.json(document);
-        } else {
-            res.status(500).json({ error: "מצטערים, קרתה תקלה בשמירת המתכון" });
-        }
-    } catch (error) {
-        res.status(500).json({ error: "מצטערים, קרתה תקלה" });
+    let scrapedText;
+    if (url) {
+        scrapedText = await new RecipePageScraper(req.log).scrape(url);
     }
-});
 
-router.post("/updateRecipe", async (req, res) => {
-    let { userName,recipe,docId } = req.body;
-
-    try {
-        const document = await FirestoreService.saveRecipe(userName, recipe, docId);
-        if (document) {
-            res.json(document);
-        } else {
-            res.status(500).json({ error: "Failed to save recipe" });
-        }
-    } catch (error) {
-        res.status(500).json({ error: "Failed to save recipe" });
+    let modelInput = "";
+    if (text && scrapedText) {
+        modelInput = `המלל הוא: ${text} והקישור הוא: ${scrapedText}`;
+    } else if (text) {
+        modelInput = text;
+    } else if (scrapedText) {
+        modelInput = scrapedText;
     }
-});
+
+    // Checked before the service is constructed, so an empty submission is reported as the user
+    // error it is rather than as whatever configuration problem the service finds first.
+    if (!modelInput && !image) {
+        throw new AppError("RECIPE_NO_INPUT", { details: { userName, hasUrl: Boolean(url) } });
+    }
+
+    const gemini = new GeminiService(req.log);
+    const formattedRecipe = await gemini.formatRecipe({ text: modelInput, image });
+    if (url) {
+        formattedRecipe.url = url;
+    }
+
+    const document = await FirestoreService.saveRecipe(userName, formattedRecipe, undefined);
+
+    req.log.info("Recipe created", {
+        userName,
+        docId: document.id,
+        title: formattedRecipe.title,
+        ingredientCount: formattedRecipe.ingredients.length,
+        instructionCount: formattedRecipe.instructions.length
+    });
+    res.json(document);
+}));
+
+router.post("/updateRecipe", asyncRoute(async (req, res) => {
+    const { userName, recipe, docId } = req.body;
+
+    if (!userName || !recipe) {
+        throw new AppError("VALIDATION_FAILED", {
+            message: "userName and recipe are required to update a recipe",
+            details: { missingFields: [!userName && "userName", !recipe && "recipe"].filter(Boolean) }
+        });
+    }
+
+    const document = await FirestoreService.saveRecipe(userName, recipe, docId);
+    req.log.info("Recipe updated", { userName, docId: document.id });
+    res.json(document);
+}));
+
+router.delete("/recipes/:docId", asyncRoute(async (req, res) => {
+    const { docId } = req.params;
+
+    await FirestoreService.deleteRecipe(docId);
+    req.log.info("Recipe deleted", { docId });
+    res.json({ message: `Recipe deleted successfully: ${docId}` });
+}));
 
 /**
- * Add a new user
+ * Add a new user, transliterating their name to Hebrew when possible.
  */
-router.post("/user", async (req, res) => {
+router.post("/user", asyncRoute(async (req, res) => {
     const { userName, given_name, family_name } = req.body;
 
-    if (!userName || !given_name || !family_name) {
-        return res.status(400).json({ error: "Missing required fields" });
+    const missingFields = [!userName && "userName", !given_name && "given_name", !family_name && "family_name"].filter(Boolean);
+    if (missingFields.length > 0) {
+        throw new AppError("VALIDATION_FAILED", { message: `Missing fields: ${missingFields.join(", ")}`, details: { missingFields } });
     }
 
+    // A failed transliteration must not block signup, so this path deliberately degrades to the
+    // original name. It is logged inside the service so the degradation is still visible.
+    let translatedNames = { given_name, family_name };
     try {
-        let chatGPTService = new ChatGPTService();
-        let translatedNames = await chatGPTService.translateNameToHebrew({ given_name, family_name });
-        if (!translatedNames) {
-            translatedNames = { given_name, family_name }; // Use input names if translation fails
-        }
-
-        const doc = await FirestoreService.addUser(userName, translatedNames.given_name, translatedNames.family_name);
-        if (doc) {
-            res.json(doc);
+        const translated = await new GeminiService(req.log).translateNameToHebrew({ given_name, family_name });
+        if (translated) {
+            translatedNames = translated;
         } else {
-            res.status(500).json({ error: "Failed to add user" });
+            req.log.warn("Storing user with untranslated name", { userName });
         }
     } catch (error) {
-        res.status(500).json({ error: "Failed to add user" });
+        req.log.warn("Storing user with untranslated name after a service failure", { userName, error });
     }
-});
 
-/**
- * Modify a family member's permission
- */
-router.put("/user/family", async (req, res) => {
+    const doc = await FirestoreService.addUser(userName, translatedNames.given_name, translatedNames.family_name);
+    req.log.info("User created", { userName, translated: translatedNames.given_name !== given_name });
+    res.json(doc);
+}));
+
+router.get("/user/:userName", asyncRoute(async (req, res) => {
+    const { userName } = req.params;
+
+    const userInfo = await FirestoreService.getUserInfo(userName);
+    if (!userInfo) {
+        throw new AppError("USER_NOT_FOUND", { details: { userName } });
+    }
+    res.json(userInfo);
+}));
+
+router.put("/user/family", asyncRoute(async (req, res) => {
     const { mainUser, modifiedFamilyMember, allowedToSeeMyRecipes, allowedToSeeTheirRecipes } = req.body;
 
-    if (!mainUser || !modifiedFamilyMember || !allowedToSeeMyRecipes || !allowedToSeeTheirRecipes) {
-        return res.status(400).json({ error: "Missing required fields" });
+    if (!mainUser || !modifiedFamilyMember) {
+        throw new AppError("VALIDATION_FAILED", {
+            message: "mainUser and modifiedFamilyMember are required",
+            details: { missingFields: [!mainUser && "mainUser", !modifiedFamilyMember && "modifiedFamilyMember"].filter(Boolean) }
+        });
     }
 
-    try {
-        const updatedUser = await FirestoreService.modifyFamilyMember(mainUser, modifiedFamilyMember, allowedToSeeMyRecipes, allowedToSeeTheirRecipes);
-        if (updatedUser) {
-            res.json({ message: "Family member updated successfully", user: updatedUser });
-        } else {
-            res.status(500).json({ error: "Failed to update family member" });
-        }
-    } catch (error) {
-        res.status(500).json({ error: "Failed to update family member" });
+    const updatedUser = await FirestoreService.modifyFamilyMember(
+        mainUser, modifiedFamilyMember, allowedToSeeMyRecipes, allowedToSeeTheirRecipes
+    );
+    if (!updatedUser) {
+        throw new AppError("USER_NOT_FOUND", { details: { userName: mainUser } });
     }
-});
 
-/**
- * remove a family member
- */
-router.post("/user/deleteFamily", async (req, res) => {
+    req.log.info("Family member updated", { mainUser, modifiedFamilyMember, allowedToSeeMyRecipes, allowedToSeeTheirRecipes });
+    res.json({ message: "Family member updated successfully", user: updatedUser });
+}));
+
+router.post("/user/deleteFamily", asyncRoute(async (req, res) => {
     const { mainUser, modifiedFamilyMember } = req.body;
 
     if (!mainUser || !modifiedFamilyMember) {
-        return res.status(400).json({ error: "Missing required fields" });
+        throw new AppError("VALIDATION_FAILED", {
+            message: "mainUser and modifiedFamilyMember are required",
+            details: { missingFields: [!mainUser && "mainUser", !modifiedFamilyMember && "modifiedFamilyMember"].filter(Boolean) }
+        });
     }
 
+    const updatedUser = await FirestoreService.removeFamilyMember(mainUser, modifiedFamilyMember);
+    if (!updatedUser) {
+        throw new AppError("USER_NOT_FOUND", { details: { userName: mainUser } });
+    }
+
+    req.log.info("Family member removed", { mainUser, modifiedFamilyMember });
+    res.json({ message: "Family member removed successfully", user: updatedUser });
+}));
+
+async function prepareImage(file, log) {
     try {
-        const updatedUser = await FirestoreService.removeFamilyMember(mainUser, modifiedFamilyMember);
-        if (updatedUser) {
-            res.json({ message: "Family member removed successfully", user: updatedUser });
-        } else {
-            res.status(500).json({ error: "Failed to remove family member" });
-        }
+        const resized = await sharp(file.buffer).resize({ width: 800 }).jpeg({ quality: 80 }).toBuffer();
+        log.debug("Resized uploaded image", {
+            originalBytes: file.size,
+            resizedBytes: resized.length,
+            mimeType: file.mimetype
+        });
+        return { mimeType: "image/jpeg", base64: resized.toString("base64") };
     } catch (error) {
-        res.status(500).json({ error: "Failed to remove family member" });
+        throw new AppError("IMAGE_INVALID", {
+            message: `Could not decode the uploaded image: ${error.message}`,
+            cause: error,
+            details: { originalName: file.originalname, mimeType: file.mimetype, bytes: file.size }
+        });
     }
-});
-
-/**
- * Get user information
- */
-router.get("/user/:userName", async (req, res) => {
-    const { userName } = req.params;
-
-    try {
-        const userInfo = await FirestoreService.getUserInfo(userName);
-        if (userInfo) {
-            res.json(userInfo);
-        } else {
-            res.status(404).json({ error: "User not found" });
-        }
-    } catch (error) {
-        res.status(500).json({ error: "Failed to fetch user information" });
-    }
-});
-
-/**
- * Delete a recipe by document ID
- */
-router.delete("/recipes/:docId", async (req, res) => {
-    const { docId } = req.params;
-
-    try {
-        const success = await FirestoreService.deleteRecipe(docId);
-        if (success) {
-            res.json({ message: `Recipe deleted successfully: ${docId}` });
-        } else {
-            res.status(500).json({ error: "Failed to delete recipe" });
-        }
-    } catch (error) {
-        res.status(500).json({ error: "Failed to delete recipe" });
-    }
-});
-
+}
 
 module.exports = router;

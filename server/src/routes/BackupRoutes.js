@@ -2,30 +2,34 @@ const express = require("express");
 const FirestoreService = require("../config/firestore");
 const ZippingService = require("../services/ZippingService");
 const GoogleDriveService = require("../services/GoogleDriveService");
+const { AppError } = require("../utils/AppError");
+const { asyncRoute } = require("../utils/routeHelpers");
 
 const router = express.Router();
-const BACKUP_FOLDER_ID = "1IUa5JpZ9_wvzD2KoamF10lGfH8uMPH7s"; // Replace with your folder ID
+const BACKUP_FOLDER_ID = process.env.BACKUP_FOLDER_ID || "1IUa5JpZ9_wvzD2KoamF10lGfH8uMPH7s";
 
-router.get("/backup", async (req, res) => {
+router.get("/backup", asyncRoute(async (req, res) => {
+    const startedAt = Date.now();
+    req.log.info("Starting backup", { folderId: BACKUP_FOLDER_ID });
+
+    const documents = await FirestoreService.fetchAllDocuments();
+    const zipStream = ZippingService.createZipStream(documents, req.log);
+    const fileName = `Firestore_Backup_${new Date().toISOString().split("T")[0]}.zip`;
+
+    let fileId;
     try {
-        console.log("Starting virtual backup process...");
-
-        // Step 1: Fetch all documents from Firestore
-        const documents = await FirestoreService.fetchAllDocuments();
-
-        // Step 2: Create a ZIP stream
-        const zipStream = ZippingService.createZipStream(documents);
-
-        // Step 3: Upload the ZIP stream to Google Drive
-        const fileName = `Firestore_Backup_${new Date().toISOString().split("T")[0]}.zip`;
-        await GoogleDriveService.uploadStream(zipStream, BACKUP_FOLDER_ID, fileName);
-
-        console.log("Backup completed successfully!");
-        res.status(200).json({ message: "Backup completed successfully!" });
+        fileId = await GoogleDriveService.uploadStream(zipStream, BACKUP_FOLDER_ID, fileName, req.log);
     } catch (error) {
-        console.error("Backup process failed:", error);
-        res.status(500).json({ error: "Backup process failed." });
+        throw AppError.from(error, "BACKUP_FAILED", { fileName, folderId: BACKUP_FOLDER_ID, documentCount: documents.length });
     }
-});
+
+    req.log.info("Backup completed", {
+        fileName,
+        fileId,
+        documentCount: documents.length,
+        durationMs: Date.now() - startedAt
+    });
+    res.status(200).json({ message: "Backup completed successfully!", fileName, documentCount: documents.length });
+}));
 
 module.exports = router;
