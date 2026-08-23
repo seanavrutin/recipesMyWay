@@ -26,6 +26,8 @@ class FirestoreService {
                 }
             }
             this._db = admin.firestore();
+            // Couchbase dropped undefined fields on serialize; Firestore throws on them instead.
+            this._db.settings({ ignoreUndefinedProperties: true });
             console.log("Firestore connected");
         } catch (error) {
             console.error("Firestore connection failed:", error);

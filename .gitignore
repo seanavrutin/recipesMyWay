@@ -13,6 +13,7 @@
 /server/credentials.json
 firebase-service-account.json
 recipesmyway-93aa2-firebase-adminsdk-*.json
+admin-key.json
 
 # Firebase
 firebase-debug.log
