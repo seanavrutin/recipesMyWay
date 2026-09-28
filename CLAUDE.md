@@ -37,6 +37,14 @@ Log format: `<iso-time> LEVEL [requestId] message {fields}`. Errors carry `code`
 - Trace one request end to end by its `requestId`, also returned as the `X-Request-Id` response header.
 - `LOG_LEVEL=debug` for detail; `LOG_FORMAT=json` to grep fields.
 
+## Instagram links
+Instagram serves logged-out requests a login page with no post content, so scraping gets nothing. Captions come from Instagram's private API (`services/InstagramCaptionFetcher.js`) using the session of a dedicated account, which `instagram-agent/` (VM 102, daily systemd user timer) keeps logged in and pushes to `POST /agent/instagram-session` → Firestore `config/instagramSession`. See `instagram-agent/README.md`.
+- `/health` → `instagram.status`: `stale` = agent hasn't pushed for 48h (check VM 102 / `journalctl --user -u instagram-agent`); `expired` = Instagram rejected the session (agent's next run re-logs in).
+- `INSTAGRAM_SESSION_EXPIRED` in logs is expected briefly after a logout; persistent = the agent is stuck (it alerts with a screenshot).
+- `INSTAGRAM_NO_CAPTION_RECIPE` = recipe is in the video/comments, not the caption. Not supported on purpose.
+- `/agent/*` refuses anything carrying `CF-Connecting-IP` (i.e. via the tunnel) and requires `INSTAGRAM_AGENT_TOKEN`.
+- `server/.env` is loaded via `env_file` (not baked into the image): env changes need `docker compose up -d`.
+
 ## Rules
 - YOU MUST reproduce the failure and read real log output before naming a cause. Never present speculation as diagnosis.
 - Verify `server/` changes: `cd server && npm run dev` (nodemon; needs `server/.env`, template at `server/.env.example`), check `/health`, then exercise the changed route with `curl` and read the log line it emits.

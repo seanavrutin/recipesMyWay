@@ -2,6 +2,7 @@ const axios = require("axios");
 const cheerio = require("cheerio");
 const { AppError } = require("../utils/AppError");
 const { logger: rootLogger } = require("../utils/Logger");
+const { InstagramCaptionFetcher, isInstagramUrl } = require("./InstagramCaptionFetcher");
 
 const FETCH_TIMEOUT_MS = Number(process.env.SCRAPE_TIMEOUT_MS || 20000);
 const MAX_TEXT_LENGTH = Number(process.env.SCRAPE_MAX_CHARS || 60000);
@@ -47,6 +48,17 @@ class RecipePageScraper {
     async scrape(url) {
         const startedAt = Date.now();
         let html;
+
+        // Instagram shows logged-out visitors a login page with no post content, so its captions come
+        // from the private API instead, using the session the agent on VM 102 keeps alive.
+        if (isInstagramUrl(url)) {
+            try {
+                return await new InstagramCaptionFetcher(this.logger).fetchCaption(url);
+            } catch (error) {
+                if (error instanceof AppError) throw error;
+                throw this.classifyFetchError(error, url, Date.now() - startedAt);
+            }
+        }
 
         try {
             const response = await axios.get(url, {
@@ -99,7 +111,7 @@ class RecipePageScraper {
             });
         }
 
-        const text = this.extractText(html, url);
+        const text = this.extractText(html);
         if (text.length < MIN_TEXT_LENGTH) {
             throw new AppError("SOURCE_EMPTY", {
                 message: "Recipe page produced too little text to contain a recipe",
@@ -117,18 +129,13 @@ class RecipePageScraper {
         return text;
     }
 
-    extractText(html, url) {
+    extractText(html) {
         const $ = cheerio.load(html);
 
         $(NOISE_SELECTORS).remove();
         $("footer, nav, aside, script, style, noscript, iframe, svg").remove();
 
-        // Instagram renders its caption client-side, so the meta description is the only text available.
-        const raw = url.includes("instagram")
-            ? ($('meta[name="description"]').attr("content") || $('meta[property="og:description"]').attr("content") || "")
-            : $("body").text();
-
-        const collapsed = raw.replace(/\s+/g, " ").trim();
+        const collapsed = $("body").text().replace(/\s+/g, " ").trim();
         return collapsed.length > MAX_TEXT_LENGTH ? collapsed.slice(0, MAX_TEXT_LENGTH) : collapsed;
     }
 

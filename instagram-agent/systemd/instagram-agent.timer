@@ -1,0 +1,12 @@
+[Unit]
+Description=Run the Instagram agent daily
+
+[Timer]
+OnBootSec=10min
+OnCalendar=*-*-* 10:00
+# Different time each day, like a person opening the app.
+RandomizedDelaySec=3h
+Persistent=true
+
+[Install]
+WantedBy=timers.target

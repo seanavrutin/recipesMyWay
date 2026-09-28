@@ -1,0 +1,14 @@
+[Unit]
+Description=Instagram agent: keep the recipes Instagram login alive and push it to RecipesMyWay
+After=graphical-session.target network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/apps/recipesMyWay/instagram-agent
+EnvironmentFile=%h/.config/instagram-agent/agent.env
+# Chrome runs visibly on the auto-login desktop; a headless browser is far easier for Instagram to spot.
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=%h/.Xauthority
+ExecStart=/bin/bash -c 'source "$HOME/.nvm/nvm.sh" && exec node agent.js'
+# A login that waits for an emailed code takes a few minutes; anything longer is stuck.
+TimeoutStartSec=15min
