@@ -1,0 +1,19 @@
+{
+  "name": "instagram-agent",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Keeps the recipes Instagram account logged in on VM 102 and pushes its session to the RecipesMyWay server",
+  "main": "agent.js",
+  "scripts": {
+    "start": "node agent.js",
+    "dry-run": "node agent.js --dry-run"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "imapflow": "^2.1.2",
+    "mailparser": "^3.9.31",
+    "playwright-core": "^1.63.0"
+  }
+}

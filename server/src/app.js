@@ -5,7 +5,9 @@ const cors = require("cors");
 const WebhookRoutes = require("./routes/WebhookRoutes");
 const RecipeRoutes = require("./routes/RecipeRoutes");
 const BackupRoutes = require("./routes/BackupRoutes");
+const AgentRoutes = require("./routes/AgentRoutes");
 const FirestoreService = require("./config/firestore");
+const InstagramSession = require("./services/InstagramSession");
 const { logger } = require("./utils/Logger");
 const { requestContext } = require("./middleware/requestContext");
 const { errorHandler, notFoundHandler } = require("./middleware/errorHandler");
@@ -25,7 +27,7 @@ const allowedOrigins = [
 // Checked at boot so a misconfigured deployment is obvious from the first log lines instead of
 // only surfacing when a user tries to add a recipe.
 const REQUIRED_ENV = ["GEMINI_API_KEY"];
-const OPTIONAL_ENV = ["GEMINI_MODEL", "LOG_LEVEL", "LOG_FORMAT", "PORT", "CORS_ALLOWED_ORIGINS", "VERIFY_TOKEN", "PHONE_NUMBER_ID", "ACCESS_TOKEN"];
+const OPTIONAL_ENV = ["GEMINI_MODEL", "LOG_LEVEL", "LOG_FORMAT", "PORT", "CORS_ALLOWED_ORIGINS", "VERIFY_TOKEN", "PHONE_NUMBER_ID", "ACCESS_TOKEN", "INSTAGRAM_AGENT_TOKEN"];
 
 class App {
     constructor() {
@@ -92,11 +94,13 @@ class App {
             res.json({
                 status: "ok",
                 uptimeSeconds: Math.round(process.uptime()),
-                geminiConfigured: Boolean(process.env.GEMINI_API_KEY)
+                geminiConfigured: Boolean(process.env.GEMINI_API_KEY),
+                instagram: InstagramSession.status()
             });
         });
 
         this.app.use("/webhook", WebhookRoutes);
+        this.app.use("/agent", AgentRoutes);
         this.app.use("/api", RecipeRoutes);
         this.app.use("/backup", BackupRoutes);
     }
@@ -121,7 +125,9 @@ class App {
             FirestoreService.connect();
         } catch (error) {
             logger.error("Firestore is unavailable at startup; requests touching the database will fail", { error });
+            return;
         }
+        InstagramSession.warm();
     }
 
     listen() {

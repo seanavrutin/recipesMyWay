@@ -6,6 +6,9 @@ services:
       context: ./server
     container_name: server
     restart: always
+    # Read at container start, not baked into the image, so an .env change only needs `docker compose up -d`.
+    env_file:
+      - ./server/.env
     environment:
       - NODE_ENV=production
       - GOOGLE_APPLICATION_CREDENTIALS=/app/secrets/firebase-service-account.json

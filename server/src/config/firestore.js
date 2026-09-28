@@ -5,6 +5,9 @@ const { logger } = require("../utils/Logger");
 
 const RECIPES_COLLECTION = "recipes";
 const USERS_COLLECTION = "users";
+// Server-only settings. Kept out of recipes/users so the Drive backup never copies them.
+const CONFIG_COLLECTION = "config";
+const INSTAGRAM_SESSION_DOC = "instagramSession";
 
 class FirestoreService {
     constructor() {
@@ -212,6 +215,32 @@ class FirestoreService {
                 message: `Failed to remove family member for ${mainUser}: ${error.message}`,
                 cause: error,
                 details: { mainUser, modifiedFamilyMember, docId, grpcCode: error.code }
+            });
+        }
+    }
+
+    /** Returns null when the agent has never pushed a session. */
+    async getInstagramSession() {
+        try {
+            const doc = await this.db.collection(CONFIG_COLLECTION).doc(INSTAGRAM_SESSION_DOC).get();
+            return doc.exists ? doc.data() : null;
+        } catch (error) {
+            throw new AppError("DB_READ_FAILED", {
+                message: `Failed to read the Instagram session: ${error.message}`,
+                cause: error,
+                details: { collection: CONFIG_COLLECTION, docId: INSTAGRAM_SESSION_DOC, grpcCode: error.code }
+            });
+        }
+    }
+
+    async saveInstagramSession(session) {
+        try {
+            await this.db.collection(CONFIG_COLLECTION).doc(INSTAGRAM_SESSION_DOC).set(session);
+        } catch (error) {
+            throw new AppError("DB_WRITE_FAILED", {
+                message: `Failed to save the Instagram session: ${error.message}`,
+                cause: error,
+                details: { collection: CONFIG_COLLECTION, docId: INSTAGRAM_SESSION_DOC, grpcCode: error.code }
             });
         }
     }

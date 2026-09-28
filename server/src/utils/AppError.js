@@ -53,6 +53,32 @@ const ERROR_CATALOG = {
         description: "The page loaded but produced too little text to be a recipe."
     },
 
+    // --- Instagram (captions fetched with the session the agent on VM 102 pushes) ---
+    INSTAGRAM_NOT_CONFIGURED: {
+        httpStatus: 503,
+        logLevel: "error",
+        userMessage: "קישורי אינסטגרם אינם זמינים כרגע. העתיקו את המתכון מהפוסט או העלו צילום מסך.",
+        description: "No Instagram session has been pushed by the agent yet, so Instagram links cannot be read."
+    },
+    INSTAGRAM_SESSION_EXPIRED: {
+        httpStatus: 503,
+        logLevel: "error",
+        userMessage: "קישורי אינסטגרם אינם זמינים כרגע. העתיקו את המתכון מהפוסט או העלו צילום מסך.",
+        description: "Instagram rejected the stored session (logged out, checkpoint or challenge). The agent must log in again."
+    },
+    INSTAGRAM_NO_CAPTION_RECIPE: {
+        httpStatus: 422,
+        logLevel: "warn",
+        userMessage: "המתכון לא מופיע בטקסט של הפוסט. העתיקו אותו ידנית או העלו צילום מסך.",
+        description: "The post's caption is missing or too short to hold a recipe (it is probably in the video or comments)."
+    },
+    AGENT_FORBIDDEN: {
+        httpStatus: 403,
+        logLevel: "warn",
+        userMessage: "אין הרשאה.",
+        description: "A request to an /agent route came through the public tunnel or without the right token."
+    },
+
     // --- Image handling ---
     IMAGE_INVALID: {
         httpStatus: 400,
