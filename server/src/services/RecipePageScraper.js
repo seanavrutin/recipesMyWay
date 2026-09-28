@@ -28,6 +28,19 @@ const BROWSER_HEADERS = {
     "Accept-Language": "he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7"
 };
 
+// Facebook answers browser-like requests from a server with 400, but serves its own link-preview
+// crawler the full page metadata, no login needed.
+const FACEBOOK_CRAWLER_UA = "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)";
+
+function isFacebookUrl(url) {
+    try {
+        const host = new URL(url).hostname.toLowerCase();
+        return ["facebook.com", "fb.com", "fb.watch"].some((domain) => host === domain || host.endsWith(`.${domain}`));
+    } catch {
+        return false;
+    }
+}
+
 const NOISE_SELECTORS = [
     '[id*="comment"]', '[class*="comment"]',
     '[id*="respond"]', '[class*="respond"]',
@@ -64,7 +77,7 @@ class RecipePageScraper {
             const response = await axios.get(url, {
                 timeout: FETCH_TIMEOUT_MS,
                 maxRedirects: 5,
-                headers: BROWSER_HEADERS,
+                headers: isFacebookUrl(url) ? { ...BROWSER_HEADERS, "User-Agent": FACEBOOK_CRAWLER_UA } : BROWSER_HEADERS,
                 responseType: "text",
                 // Classify the status ourselves instead of taking a generic axios throw.
                 validateStatus: () => true
@@ -111,7 +124,7 @@ class RecipePageScraper {
             });
         }
 
-        const text = this.extractText(html);
+        const text = isFacebookUrl(url) ? this.extractFacebookText(html) : this.extractText(html);
         if (text.length < MIN_TEXT_LENGTH) {
             throw new AppError("SOURCE_EMPTY", {
                 message: "Recipe page produced too little text to contain a recipe",
@@ -137,6 +150,34 @@ class RecipePageScraper {
 
         const collapsed = $("body").text().replace(/\s+/g, " ").trim();
         return collapsed.length > MAX_TEXT_LENGTH ? collapsed.slice(0, MAX_TEXT_LENGTH) : collapsed;
+    }
+
+    /**
+     * Facebook's page body is empty for the crawler; the post text lives in the meta tags. For reels,
+     * og:title holds the whole caption as "<views> · <reactions> | <caption> | <author>", while
+     * og:description is cut off after ~200 chars, so the longest candidate wins.
+     */
+    extractFacebookText(html) {
+        const $ = cheerio.load(html);
+        const candidates = [
+            $('meta[property="og:title"]').attr("content"),
+            $('meta[property="og:description"]').attr("content"),
+            $('meta[name="description"]').attr("content"),
+            $("title").text()
+        ].map((value) => (value || "").replace(/[‎‏]/g, "").trim());
+
+        let text = candidates.reduce((longest, value) => (value.length > longest.length ? value : longest), "");
+
+        const segments = text.split(" | ");
+        if (segments.length > 1 && /\d/.test(segments[0]) && segments[0].includes("·") && segments[0].length < 80) {
+            segments.shift();
+        }
+        if (segments.length > 1 && segments[segments.length - 1].length < 60 && !segments[segments.length - 1].includes("\n")) {
+            segments.pop();
+        }
+        text = segments.join(" | ").replace(/[ \t]+/g, " ").trim();
+
+        return text.length > MAX_TEXT_LENGTH ? text.slice(0, MAX_TEXT_LENGTH) : text;
     }
 
     classifyFetchError(error, url, durationMs) {

@@ -43,6 +43,7 @@ Instagram serves logged-out requests a login page with no post content, so scrap
 - `INSTAGRAM_SESSION_EXPIRED` in logs is expected briefly after a logout; persistent = the agent is stuck (it alerts with a screenshot).
 - `INSTAGRAM_NO_CAPTION_RECIPE` = recipe is in the video/comments, not the caption. Not supported on purpose.
 - `/agent/*` refuses anything carrying `CF-Connecting-IP` (i.e. via the tunnel) and requires `INSTAGRAM_AGENT_TOKEN`.
+- Facebook links (`facebook.com`, `fb.com`, `fb.watch`) need no session: fetched as Facebook's own link-preview crawler (`facebookexternalhit`), since browser-like requests get HTTP 400. The body is empty for the crawler; the caption is read from the meta tags (for reels the full caption is in `og:title`, `og:description` is truncated).
 - `server/.env` is loaded via `env_file` (not baked into the image): env changes need `docker compose up -d`.
 
 ## Rules
